@@ -1,0 +1,8 @@
+# Binários Go
+*.exe
+/bin/
+
+# Base de cartas local (regenerável via `go run ./cmd/import <setID>`)
+/data/
+
+.vscode/
