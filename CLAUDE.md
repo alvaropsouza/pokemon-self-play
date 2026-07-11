@@ -13,11 +13,15 @@ App em Go para jogar Pokémon TCG sozinho com cartas físicas. Uma câmera apont
 
 ```
 cmd/import/          CLI que baixa cartas do TCGdex (EN+PT) para data/cards.json
+cmd/play/            servidor web da partida contra o bot (UI embutida em index.html)
 internal/cards/      modelo canônico de carta, cliente TCGdex, store JSON
 internal/deck/       decklist + validação de construção (60 cartas, 4 cópias, ACE SPEC...)
 internal/game/       motor de regras: estado, ações de turno, combate, checkup, arbitragem
+internal/bot/        oponente: construtor de deck por tipo + piloto de turno heurístico
 data/cards.json      base local de cartas (git-ignored; regenerável)
 ```
+
+Roadmap com todas as etapas e o que está pronto: **`PLANO.md`**.
 
 **Motor de regras (`internal/game`)** — fase 3, implementado:
 - Árbitro com estado completo (zonas, prêmios, condições especiais); determinístico por seed.
@@ -25,10 +29,11 @@ data/cards.json      base local de cartas (git-ignored; regenerável)
 - **Efeitos de texto não são interpretados**: ataques com efeito, Treinadores e Habilidades têm o limite/mecânica aplicados pelo motor e o efeito resolvido manualmente pelos helpers de `arbiter.go` (ApplyDamage, Heal, SetCondition, DrawCards, SwitchActive...). Automatizar efeitos carta a carta é trabalho incremental futuro.
 - Prêmios por nocaute: heurística por nome em `PrizeValue` (ex = 2, Mega ex = 3) — TCGdex não expõe a Rule Box.
 
-**Comandos:**
-- `go run ./cmd/import <setID> [setID...]` — importa sets (IDs TCGdex, ex.: `me01`, `sv10`; lista em `api.tcgdex.net/v2/en/sets`).
-- `go run ./cmd/import -standard-only <setID>` — só cartas com marca H/I/J.
-- `go build ./...` / `go vet ./...` — build e checagem.
+**Comandos** (via go-task; `task` sem argumento lista tudo — ver `Taskfile.yml`):
+- `task play` — partida contra o bot em http://localhost:8080 (`task play MYTYPE=Grass BOTTYPE=Fire SEED=3`).
+- `task import -- <setID> [setID...]` — importa sets (IDs TCGdex, ex.: `me01`, `sve`; lista em `api.tcgdex.net/v2/en/sets`; flag `-standard-only` filtra H/I/J).
+- `task check` — build + vet + testes (rodar antes de commitar).
+- Equivalentes diretos: `go run ./cmd/play ...`, `go run ./cmd/import ...`, `go test ./...`.
 
 Nota: campo `legal.standard` dos sets no TCGdex é desatualizado/incorreto — legalidade sempre pelo `regulationMark` da carta (ver `Card.StandardLegal`).
 

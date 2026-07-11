@@ -6,10 +6,10 @@
 package main
 
 import (
-	_ "embed"
 	"encoding/json"
 	"flag"
 	"fmt"
+	"io/fs"
 	"log"
 	"net/http"
 	"strings"
@@ -19,10 +19,8 @@ import (
 	"github.com/alvaropsouza/pokemon-self-play/internal/cards"
 	"github.com/alvaropsouza/pokemon-self-play/internal/deck"
 	"github.com/alvaropsouza/pokemon-self-play/internal/game"
+	"github.com/alvaropsouza/pokemon-self-play/web"
 )
-
-//go:embed index.html
-var indexHTML []byte
 
 const (
 	human = 0
@@ -64,10 +62,11 @@ func main() {
 		log.Fatalf("setup do bot: %v", err)
 	}
 
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		w.Write(indexHTML)
-	})
+	dist, err := fs.Sub(web.Dist, "dist")
+	if err != nil {
+		log.Fatal(err)
+	}
+	http.Handle("/", http.FileServer(http.FS(dist)))
 	http.HandleFunc("/api/state", s.handleState)
 	http.HandleFunc("/api/action", s.handleAction)
 

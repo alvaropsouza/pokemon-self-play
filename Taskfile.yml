@@ -1,0 +1,55 @@
+# Scripts do projeto (github.com/go-task/task — instalado via
+# `go install github.com/go-task/task/v3/cmd/task@latest`).
+# Uso: `task` lista tudo; `task play`, `task test`, `task import -- me01`...
+version: "3"
+
+tasks:
+  default:
+    desc: Lista as tarefas disponíveis
+    cmds:
+      - task --list
+    silent: true
+
+  play:
+    desc: "Partida contra o bot em http://localhost:8080 (vars: MYTYPE, BOTTYPE, SEED)"
+    vars:
+      MYTYPE: '{{.MYTYPE | default "Fire"}}'
+      BOTTYPE: '{{.BOTTYPE | default "Water"}}'
+      SEED: '{{.SEED | default "7"}}'
+    cmds:
+      - go run ./cmd/play -mytype {{.MYTYPE}} -bottype {{.BOTTYPE}} -seed {{.SEED}}
+
+  web-build:
+    desc: "Compila o frontend (Vite + React) para web/dist (embutido no binário)"
+    dir: web
+    cmds:
+      - npm install
+      - npm run build
+
+  web:
+    desc: "Frontend em modo dev (Vite, proxy /api -> :8080; rode `task play` junto)"
+    dir: web
+    cmds:
+      - npm run dev
+
+  import:
+    desc: "Importa sets do TCGdex (ex.: task import -- me01 sve)"
+    cmds:
+      - go run ./cmd/import {{.CLI_ARGS}}
+
+  build:
+    desc: Compila tudo
+    cmds:
+      - go build ./...
+
+  test:
+    desc: Roda todos os testes
+    cmds:
+      - go test -count=1 ./...
+
+  check:
+    desc: Build + vet + testes (rodar antes de commitar)
+    cmds:
+      - go build ./...
+      - go vet ./...
+      - go test -count=1 ./...

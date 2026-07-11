@@ -21,21 +21,24 @@ Marcar `[x]` conforme concluir. Regras canônicas e decisões de arquitetura: ve
 - [x] Validador de deck (`internal/deck`): 60 cartas, 4 cópias, ACE SPEC, legalidade H/I/J.
 - [x] Testes do motor e do validador.
 
-## Etapa 2 — Bot + interface jogável (em andamento)
+## Etapa 2 — Bot + interface jogável ✅
 
 Objetivo: jogar uma partida completa contra o bot no navegador, tudo virtual.
 É a interface que acompanha o desenvolvimento do projeto daqui em diante.
 
-- [ ] Construtor de deck do bot (`internal/bot`): filtra pool por tipo(s) escolhido(s),
+Jogar: `go run ./cmd/play -mytype Fire -bottype Water -seed 7` → http://localhost:8080
+
+- [x] Construtor de deck do bot (`internal/bot`): filtra pool por tipo(s) escolhido(s),
       monta linhas de evolução + energias, determinístico por seed, valida com `internal/deck`.
-- [ ] Piloto de turno do bot: heurística simples — baixar básicos, evoluir, ligar energia,
+- [x] Piloto de turno do bot: heurística simples — baixar básicos, evoluir, ligar energia,
       atacar com maior dano pago, promover melhor opção após nocaute.
-- [ ] Servidor web (`cmd/play`): estado da partida via JSON, ações via POST,
+- [x] Servidor web (`cmd/play`): estado da partida via JSON, ações via POST,
       bot joga automaticamente no turno dele.
-- [ ] UI no navegador: mesa com as duas metades (imagens das cartas via TCGdex),
+- [x] UI no navegador: mesa com as duas metades (imagens das cartas via TCGdex),
       mão do jogador clicável, log da partida, painel de arbitragem manual
       (dano, cura, condição, compra, troca) para efeitos de carta.
-- [ ] Ocultação de informação: mão/deck/prêmios do bot aparecem só como contagem.
+- [x] Ocultação de informação: mão/deck/prêmios do bot aparecem só como contagem.
+- [x] Teste de fumaça: partidas bot vs bot completas terminam sem travar.
 
 ## Etapa 3 — Qualidade de jogo
 
