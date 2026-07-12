@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
-import { fetchState, postAction, type GameState } from './api'
+import { fetchState, postAction, type CardView, type GameState } from './api'
 import type { Sel } from './selection'
+import { CardPreview, PreviewCtx } from './preview'
 import { Sidebar } from './components/Sidebar'
 import { BotMat, YouMat } from './components/Mat'
 import { ActionBar } from './components/ActionBar'
@@ -57,6 +58,7 @@ export default function App() {
   const [sel, setSel] = useState<Sel>(null)
   const [err, setErr] = useState('')
   const [pane, setPane] = useState<Pane>('')
+  const [preview, setPreview] = useState<CardView | null>(null)
 
   useEffect(() => { fetchState().then(setS) }, [])
 
@@ -74,17 +76,20 @@ export default function App() {
   if (!s) return null
 
   return (
-    <div id="app">
-      <Sidebar you={s.you} bot={s.bot} />
-      <div id="center">
-        <BotMat side={s.bot} stadium={s.stadium} />
-        <YouMat side={s.you} sel={sel} onSelect={select} />
-        <ActionBar s={s} sel={sel} err={err} post={post} />
-        <HandTray s={s} sel={sel} onSelect={i => select('hand', i)} />
+    <PreviewCtx.Provider value={setPreview}>
+      <div id="app">
+        <Sidebar you={s.you} bot={s.bot} />
+        <div id="center">
+          <BotMat side={s.bot} stadium={s.stadium} />
+          <YouMat side={s.you} sel={sel} onSelect={select} />
+          <ActionBar s={s} sel={sel} err={err} post={post} />
+          <HandTray s={s} sel={sel} onSelect={i => select('hand', i)} />
+        </div>
+        <RightRail pane={pane} setPane={setPane} endTurn={() => post({ action: 'end_turn' })} />
+        <Drawer pane={pane} s={s} post={post} />
+        <CardPreview card={preview} />
+        <WinnerOverlay winner={s.winner} />
       </div>
-      <RightRail pane={pane} setPane={setPane} endTurn={() => post({ action: 'end_turn' })} />
-      <Drawer pane={pane} s={s} post={post} />
-      <WinnerOverlay winner={s.winner} />
-    </div>
+    </PreviewCtx.Provider>
   )
 }

@@ -13,7 +13,10 @@ App em Go para jogar Pokémon TCG sozinho com cartas físicas. Uma câmera apont
 
 ```
 cmd/import/          CLI que baixa cartas do TCGdex (EN+PT) para data/cards.json
-cmd/play/            servidor web da partida contra o bot (UI embutida em index.html)
+cmd/play/            servidor web da partida contra o bot (serve o build de web/ + /api)
+web/                 frontend da partida (Vite + React + TS); build em web/dist,
+                     embutido no binário via go:embed (web/embed.go) — dist é commitado
+                     para o build Go funcionar sem Node
 internal/cards/      modelo canônico de carta, cliente TCGdex, store JSON
 internal/deck/       decklist + validação de construção (60 cartas, 4 cópias, ACE SPEC...)
 internal/game/       motor de regras: estado, ações de turno, combate, checkup, arbitragem
@@ -33,6 +36,8 @@ Roadmap com todas as etapas e o que está pronto: **`PLANO.md`**.
 - `task play` — partida contra o bot em http://localhost:8080 (`task play MYTYPE=Grass BOTTYPE=Fire SEED=3`).
 - `task import -- <setID> [setID...]` — importa sets (IDs TCGdex, ex.: `me01`, `sve`; lista em `api.tcgdex.net/v2/en/sets`; flag `-standard-only` filtra H/I/J).
 - `task check` — build + vet + testes (rodar antes de commitar).
+- `task web-build` — recompila o frontend para web/dist (rodar após mudar web/src; commitar o dist).
+- `task web` — frontend em modo dev (Vite com HMR, proxy /api → :8080; rodar `task play` junto).
 - Equivalentes diretos: `go run ./cmd/play ...`, `go run ./cmd/import ...`, `go test ./...`.
 
 Nota: campo `legal.standard` dos sets no TCGdex é desatualizado/incorreto — legalidade sempre pelo `regulationMark` da carta (ver `Card.StandardLegal`).
