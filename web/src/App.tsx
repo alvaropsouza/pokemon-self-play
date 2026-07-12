@@ -19,7 +19,10 @@ function HandTray({ s, sel, onSelect }: {
       {hand.length === 0 && <span className="empty-hand">Mão vazia</span>}
       {hand.map((c, i) => (
         <Card key={i} view={c} onClick={() => onSelect(i)}
-          dragData={c.category === 'Energy' ? String(i) : undefined}
+          dragData={c.category === 'Energy' ? `energy:${i}`
+            : c.category === 'Pokemon'
+              ? (c.stage === 'Basic' ? `pokemon:${i}` : `evolve:${i}`)
+              : undefined}
           selected={sel?.kind === 'hand' && sel.idx === i} />
       ))}
     </div>
@@ -83,7 +86,20 @@ export default function App() {
         <div id="center">
           <BotMat side={s.bot} stadium={s.stadium} />
           <YouMat side={s.you} sel={sel} onSelect={select}
-            onDropHand={(slot, hand) => post({ action: 'attach_energy', hand, slot })} />
+            dragBench={!!s.needPromote?.[0]}
+            onDropHand={(slot, data) => {
+              const [kind, idx] = data.split(':')
+              const i = parseInt(idx)
+              if (isNaN(i)) return
+              if (kind === 'energy') post({ action: 'attach_energy', hand: i, slot })
+              else if (kind === 'evolve') post({ action: 'evolve', hand: i, slot })
+              else if (kind === 'bench') {
+                if (slot === -1) post({ action: 'promote', bench: i })
+              } else if (kind === 'pokemon') {
+                if (slot === -1 && !s.you.active) post({ action: 'place_active', hand: i })
+                else post({ action: 'place_bench', hand: i })
+              }
+            }} />
           <ActionBar s={s} sel={sel} err={err} post={post} />
           <HandTray s={s} sel={sel} onSelect={i => select('hand', i)} />
         </div>

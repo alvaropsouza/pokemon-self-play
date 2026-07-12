@@ -1,23 +1,11 @@
 import { useContext } from 'react'
 import type { CardView, PokemonView } from '../api'
-import { energyStyle } from '../energy'
+import { energyColor, energyImage } from '../energy'
 import { PreviewCtx } from '../preview'
 
-// Carta de energia desenhada em CSS: energias básicas do TCGdex não têm imagem.
-function EnergyFace({ c }: { c: CardView }) {
-  const s = energyStyle(c.nameEN)
-  return (
-    <div className="card energycard" style={{ background: s.color }} title={c.name}>
-      <span className="etype">ENERGIA</span>
-      <span className="eicon">{s.icon}</span>
-      <span className="ename">{c.name}</span>
-    </div>
-  )
-}
-
-// Carta genérica: imagem quando existe; energia sem imagem vira EnergyFace;
-// demais sem imagem, fallback textual. Overlays de dano e condições quando o
-// view é um Pokémon em jogo. Hover publica a carta no painel de preview.
+// Carta genérica: imagem quando existe; energia básica sem imagem usa o scan
+// do pokemontcg.io; demais sem imagem, fallback textual. Overlays de dano e
+// condições quando o view é um Pokémon em jogo. Hover publica no preview.
 export function Card({ view, selected, onClick, dragData }: {
   view: CardView | PokemonView
   selected?: boolean
@@ -28,6 +16,7 @@ export function Card({ view, selected, onClick, dragData }: {
   const c = 'card' in view ? view.card : view
   const pk = 'card' in view ? view : null
   const setPreview = useContext(PreviewCtx)
+  const img = c.image || (c.category === 'Energy' ? energyImage(c.nameEN) : '')
   const cls = 'cardbox' + (onClick ? ' click' : '') + (selected ? ' sel' : '')
   return (
     <div className={cls} onClick={onClick}
@@ -36,11 +25,9 @@ export function Card({ view, selected, onClick, dragData }: {
         ? e => e.dataTransfer.setData('text/plain', dragData)
         : undefined}
       onMouseEnter={() => setPreview(c)} onMouseLeave={() => setPreview(null)}>
-      {c.image
-        ? <img className="card" src={c.image} title={c.name} alt={c.name} />
-        : c.category === 'Energy'
-          ? <EnergyFace c={c} />
-          : <div className="card txt">{c.name}</div>}
+      {img
+        ? <img className="card" src={img} title={c.name} alt={c.name} />
+        : <div className="card txt">{c.name}</div>}
       {pk && pk.damage > 0 && <span className="dmg">{pk.damage}</span>}
       {pk && pk.conditions.length > 0 && <span className="cond">{pk.conditions.join(',')}</span>}
     </div>
@@ -53,29 +40,34 @@ export function EmptySlot() {
 
 // Slot de Pokémon em jogo (ativo/banco); vazio vira slot tracejado.
 // Energias ligadas aparecem como bolinhas coloridas por elemento.
-export function PokemonSlot({ view, selected, onClick, onDropCard }: {
+export function PokemonSlot({ view, selected, onClick, onDropCard, dragData }: {
   view: PokemonView | null | undefined
   selected?: boolean
   onClick?: () => void
-  // Recebe o dataTransfer de uma carta da mão largada neste Pokémon.
+  // Recebe o dataTransfer de uma carta da mão largada neste slot (mesmo vazio).
   onDropCard?: (data: string) => void
+  // Torna o Pokémon deste slot arrastável (ex.: promover do banco).
+  dragData?: string
 }) {
-  if (!view) return <div><EmptySlot /></div>
-  const energies = view.energies ?? []
   const droppable = onDropCard !== undefined
+  const dropProps = droppable ? {
+    onDragOver: (e: React.DragEvent) => e.preventDefault(),
+    onDrop: (e: React.DragEvent) => {
+      e.preventDefault()
+      onDropCard(e.dataTransfer.getData('text/plain'))
+    },
+  } : {}
+  if (!view) return <div {...dropProps}><EmptySlot /></div>
+  const energies = view.energies ?? []
   return (
-    <div
-      onDragOver={droppable ? e => e.preventDefault() : undefined}
-      onDrop={droppable ? e => {
-        e.preventDefault()
-        onDropCard(e.dataTransfer.getData('text/plain'))
-      } : undefined}>
-      <Card view={view} selected={selected} onClick={onClick} />
+    <div {...dropProps}>
+      {/* key pelo id: evoluir troca a carta e remonta o nó → animação de entrada */}
+      <Card key={view.card.id} view={view} selected={selected} onClick={onClick} dragData={dragData} />
       {(energies.length > 0 || view.tool) && (
         <div className="sub">
           {energies.map((e, i) => (
             <span key={i} className="edot" title={e.name}
-              style={{ background: energyStyle(e.nameEN).color }} />
+              style={{ background: energyColor(e.nameEN) }} />
           ))}
           {view.tool && <span title={view.tool.name}> 🔧</span>}
         </div>

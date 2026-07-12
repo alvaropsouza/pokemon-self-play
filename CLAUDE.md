@@ -1,5 +1,7 @@
 # pokemon-self-play
 
+> **Boas práticas Go obrigatórias:** siga `docs/go-best-practices.md` em todo código Go escrito neste projeto — erros com `%w`, zero dependências externas, motor single-threaded, `task check` deve passar.
+
 App em Go para jogar Pokémon TCG sozinho com cartas físicas. Uma câmera aponta para a mesa e enxerga todas as zonas do jogo; o app reconhece cartas e estado da partida, atua como oponente e árbitro.
 
 **Fases planejadas do projeto:**

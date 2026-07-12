@@ -2,12 +2,14 @@ import type { CardView, SideView } from '../api'
 import type { Sel } from '../selection'
 import { Card, DeckPile, DiscardPile, EmptySlot, PokemonSlot } from './Card'
 
-function Bench({ side, isYou, sel, onSelect, onDropHand }: {
+function Bench({ side, isYou, sel, onSelect, onDropHand, dragBench }: {
   side: SideView
   isYou: boolean
   sel: Sel
   onSelect: (kind: 'active' | 'bench', idx: number) => void
-  onDropHand?: (slot: number, handIdx: number) => void
+  onDropHand?: (slot: number, data: string) => void
+  // Pokémon do banco arrastáveis para o Ativo (promoção após nocaute).
+  dragBench?: boolean
 }) {
   return (
     <div>
@@ -18,7 +20,8 @@ function Bench({ side, isYou, sel, onSelect, onDropHand }: {
           return (
             <PokemonSlot key={i} view={b}
               onClick={isYou && b ? () => onSelect('bench', i) : undefined}
-              onDropCard={onDropHand && b ? data => onDropHand(i, parseInt(data)) : undefined}
+              onDropCard={onDropHand ? data => onDropHand(i, data) : undefined}
+              dragData={dragBench && b ? `bench:${i}` : undefined}
               selected={isYou && sel?.kind === 'bench' && sel.idx === i} />
           )
         })}
@@ -32,7 +35,7 @@ function ActiveSpot({ side, isYou, sel, onSelect, onDropHand }: {
   isYou: boolean
   sel: Sel
   onSelect: (kind: 'active' | 'bench', idx: number) => void
-  onDropHand?: (slot: number, handIdx: number) => void
+  onDropHand?: (slot: number, data: string) => void
 }) {
   return (
     <div className="activewrap active">
@@ -40,7 +43,7 @@ function ActiveSpot({ side, isYou, sel, onSelect, onDropHand }: {
         <div className="mlabel">Pokémon Ativo</div>
         <PokemonSlot view={side.active}
           onClick={isYou && side.active ? () => onSelect('active', -1) : undefined}
-          onDropCard={onDropHand && side.active ? data => onDropHand(-1, parseInt(data)) : undefined}
+          onDropCard={onDropHand ? data => onDropHand(-1, data) : undefined}
           selected={isYou && sel?.kind === 'active'} />
       </div>
     </div>
@@ -84,18 +87,20 @@ export function BotMat({ side, stadium }: { side: SideView; stadium?: CardView }
 }
 
 // Metade do jogador: espelhada (ativo em cima do banco, pilhas à direita).
-export function YouMat({ side, sel, onSelect, onDropHand }: {
+export function YouMat({ side, sel, onSelect, onDropHand, dragBench }: {
   side: SideView
   sel: Sel
   onSelect: (kind: 'active' | 'bench', idx: number) => void
-  // Carta da mão largada num Pokémon seu (slot -1 = Ativo, 0.. = banco).
-  onDropHand?: (slot: number, handIdx: number) => void
+  // Carta da mão largada num slot seu (slot -1 = Ativo, 0.. = banco).
+  // data = conteúdo do dataTransfer ("energy:i", "pokemon:i", "evolve:i" ou "bench:i").
+  onDropHand?: (slot: number, data: string) => void
+  dragBench?: boolean
 }) {
   return (
     <section className="mat you">
       <div className="fieldcol">
         <ActiveSpot side={side} isYou sel={sel} onSelect={onSelect} onDropHand={onDropHand} />
-        <Bench side={side} isYou sel={sel} onSelect={onSelect} onDropHand={onDropHand} />
+        <Bench side={side} isYou sel={sel} onSelect={onSelect} onDropHand={onDropHand} dragBench={dragBench} />
       </div>
       <Piles side={side} />
     </section>

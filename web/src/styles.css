@@ -51,6 +51,18 @@ body { margin:0; background:var(--bg); color:var(--txt); font:13px/1.4 system-ui
 .active .cardbox .card, .active .slot { width:calc(var(--cw) * 1.18); }
 
 .cardbox { position:relative; display:inline-block; cursor:default; flex:none; }
+/* Cartas do bot ficam viradas para ele (realismo de mesa); o preview no hover
+   renderiza fora do tabuleiro e continua na orientação do jogador. */
+.mat.bot .cardbox .card { transform:rotate(180deg); }
+/* Pokémon entrando em jogo (setup, banco, evolução): pop de entrada. */
+@keyframes cardin { from { transform:scale(1.5); opacity:0; } }
+.fieldcol .cardbox { animation:cardin .3s ease-out; }
+/* Energia recém-ligada: bolinha nasce com pop + brilho. */
+@keyframes edotin {
+  0% { transform:scale(2.6); box-shadow:0 0 12px 5px rgba(255,240,150,.95); }
+  100% { transform:scale(1); }
+}
+.edot { animation:edotin .45s ease-out; }
 .cardbox.click { cursor:pointer; }
 .cardbox.sel { outline:3px solid var(--accent); border-radius:8px; box-shadow:0 0 14px rgba(245,185,66,.6); }
 .card { width:var(--cw); border-radius:6px; display:block; box-shadow:0 2px 6px rgba(0,0,0,.35); }
@@ -102,17 +114,9 @@ button.primary { background:var(--accent); color:#1a1a1a; font-weight:700; borde
 #winner { position:fixed; inset:0; background:rgba(5,5,10,.85); display:flex; align-items:center; justify-content:center; z-index:20; }
 #winner div { font-size:30px; color:var(--accent); font-weight:800; }
 
-/* ---- carta de energia desenhada (TCGdex não tem imagem p/ energia básica) ---- */
-.energycard { aspect-ratio:63/88; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4%; color:#fff; text-shadow:0 1px 2px rgba(0,0,0,.45); border:3px solid rgba(255,255,255,.55); }
-.energycard .etype { font-size:.55em; font-weight:700; letter-spacing:2px; opacity:.9; }
-.energycard .eicon { font-size:2.6em; line-height:1; }
-.energycard .ename { font-size:.7em; font-weight:700; text-align:center; padding:0 4px; }
-.energycard.big { width:100%; height:100%; font-size:28px; border-radius:14px; }
-
 /* bolinhas de energia ligada, coloridas por elemento */
 .edot { display:inline-block; width:13px; height:13px; border-radius:50%; border:2px solid rgba(255,255,255,.75); box-shadow:0 1px 2px rgba(0,0,0,.35); margin:0 1px; vertical-align:middle; }
 
 /* ---- painel de preview no hover ---- */
 #preview { position:fixed; left:160px; top:50%; transform:translateY(-50%); width:min(340px, 26vw); z-index:15; pointer-events:none; filter:drop-shadow(0 8px 30px rgba(0,0,0,.7)); }
 #preview img { width:100%; border-radius:14px; display:block; }
-#preview .energycard.big { aspect-ratio:63/88; }
