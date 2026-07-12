@@ -27,6 +27,7 @@ func main() {
 	flag.Parse()
 
 	setIDs := flag.Args()
+	anyFailed := false
 	if len(setIDs) == 0 {
 		fmt.Fprintln(os.Stderr, "uso: import [-standard-only] <setID> [setID...]")
 		os.Exit(2)
@@ -78,7 +79,7 @@ func main() {
 		wg.Wait()
 		fmt.Printf("  importadas %d, puladas %d, falhas %d\n", imported, skipped, failed)
 		if failed > 0 {
-			defer os.Exit(1)
+			anyFailed = true
 		}
 	}
 
@@ -86,6 +87,9 @@ func main() {
 		fatal(err)
 	}
 	fmt.Printf("base salva em %s (%d cartas, sets: %v)\n", dbPath, len(store.Cards), store.SetIDs())
+	if anyFailed {
+		os.Exit(1)
+	}
 }
 
 func fatal(err error) {

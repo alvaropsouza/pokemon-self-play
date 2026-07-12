@@ -90,11 +90,11 @@ func BuildDeck(store *cards.Store, types []string, seed int64) (*deck.Deck, erro
 		d.Add(b.ID, 3)
 		pokemon += 3
 		// Estágio 1 e, se houver, Estágio 2 da mesma linha.
-		for _, e1 := range firstEvo(evoByFrom, b.Name.EN, seenName) {
+		if e1 := firstEvo(evoByFrom, b.Name.EN, seenName); e1 != nil {
 			d.Add(e1.ID, 2)
 			pokemon += 2
 			seenName[e1.Name.EN] = true
-			for _, e2 := range firstEvo(evoByFrom, e1.Name.EN, seenName) {
+			if e2 := firstEvo(evoByFrom, e1.Name.EN, seenName); e2 != nil {
 				d.Add(e2.ID, 1)
 				pokemon++
 				seenName[e2.Name.EN] = true
@@ -126,11 +126,11 @@ func BuildDeck(store *cards.Store, types []string, seed int64) (*deck.Deck, erro
 	return d, nil
 }
 
-// firstEvo devolve no máximo 1 evolução ainda não usada de um nome.
-func firstEvo(evoByFrom map[string][]*cards.Card, from string, seen map[string]bool) []*cards.Card {
+// firstEvo devolve a primeira evolução ainda não usada de um nome (nil se nenhuma).
+func firstEvo(evoByFrom map[string][]*cards.Card, from string, seen map[string]bool) *cards.Card {
 	for _, e := range evoByFrom[from] {
 		if !seen[e.Name.EN] {
-			return []*cards.Card{e}
+			return e
 		}
 	}
 	return nil

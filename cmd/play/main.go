@@ -75,7 +75,11 @@ func main() {
 }
 
 func buildDeck(store *cards.Store, typ string, seed int64) (*deck.Deck, error) {
-	return bot.BuildDeck(store, []string{strings.Title(strings.ToLower(typ))}, seed)
+	typ = strings.ToLower(typ)
+	if typ != "" {
+		typ = strings.ToUpper(typ[:1]) + typ[1:]
+	}
+	return bot.BuildDeck(store, []string{typ}, seed)
 }
 
 // advance faz o bot agir sempre que for a vez dele (promoção e turno completo).

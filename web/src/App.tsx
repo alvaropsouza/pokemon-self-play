@@ -19,6 +19,7 @@ function HandTray({ s, sel, onSelect }: {
       {hand.length === 0 && <span className="empty-hand">Mão vazia</span>}
       {hand.map((c, i) => (
         <Card key={i} view={c} onClick={() => onSelect(i)}
+          dragData={c.category === 'Energy' ? String(i) : undefined}
           selected={sel?.kind === 'hand' && sel.idx === i} />
       ))}
     </div>
@@ -81,7 +82,8 @@ export default function App() {
         <Sidebar you={s.you} bot={s.bot} />
         <div id="center">
           <BotMat side={s.bot} stadium={s.stadium} />
-          <YouMat side={s.you} sel={sel} onSelect={select} />
+          <YouMat side={s.you} sel={sel} onSelect={select}
+            onDropHand={(slot, hand) => post({ action: 'attach_energy', hand, slot })} />
           <ActionBar s={s} sel={sel} err={err} post={post} />
           <HandTray s={s} sel={sel} onSelect={i => select('hand', i)} />
         </div>

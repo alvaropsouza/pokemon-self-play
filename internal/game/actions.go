@@ -194,7 +194,7 @@ func (g *Game) Retreat(p, benchIdx int, energyIdxs []int) error {
 		return fmt.Errorf("sem Ativo")
 	}
 	if ps.Active.Rot == CondAsleep || ps.Active.Rot == CondParalyzed {
-		return fmt.Errorf("Pokémon %s não pode recuar", map[Condition]string{CondAsleep: "Adormecido", CondParalyzed: "Paralisado"}[ps.Active.Rot])
+		return fmt.Errorf("Pokémon %s não pode recuar", condPT[ps.Active.Rot])
 	}
 	if benchIdx < 0 || benchIdx >= len(ps.Bench) {
 		return fmt.Errorf("posição de banco inválida: %d", benchIdx)

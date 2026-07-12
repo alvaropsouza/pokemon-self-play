@@ -1,4 +1,4 @@
-import { createContext, useContext } from 'react'
+import { createContext } from 'react'
 import type { CardView } from './api'
 import { energyStyle } from './energy'
 
@@ -6,10 +6,6 @@ import { energyStyle } from './energy'
 // flutuante com a imagem em alta resolução (cartas pequenas no tabuleiro
 // são ilegíveis sem isso).
 export const PreviewCtx = createContext<(c: CardView | null) => void>(() => {})
-
-export function usePreview() {
-  return useContext(PreviewCtx)
-}
 
 export function CardPreview({ card }: { card: CardView | null }) {
   if (!card) return null

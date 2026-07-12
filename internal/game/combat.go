@@ -24,7 +24,7 @@ func (g *Game) Attack(p, attackIdx int) error {
 		return fmt.Errorf("sem Ativo")
 	}
 	if ps.Active.Rot == CondAsleep || ps.Active.Rot == CondParalyzed {
-		return fmt.Errorf("Pokémon %s não pode atacar", map[Condition]string{CondAsleep: "Adormecido", CondParalyzed: "Paralisado"}[ps.Active.Rot])
+		return fmt.Errorf("Pokémon %s não pode atacar", condPT[ps.Active.Rot])
 	}
 	atkCard := g.Card(ps.Active.TopID())
 	if attackIdx < 0 || attackIdx >= len(atkCard.Attacks) {

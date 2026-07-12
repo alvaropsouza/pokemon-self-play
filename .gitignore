@@ -9,5 +9,4 @@
 
 # Frontend (web/dist é commitado para o go:embed funcionar sem Node)
 /web/node_modules/
-/web/dist/
 .playwright-mcp

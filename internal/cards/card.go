@@ -7,14 +7,6 @@
 // exibição/reconhecimento.
 package cards
 
-// Lang identifica um dos idiomas suportados pela coleção física.
-type Lang string
-
-const (
-	LangEN Lang = "en"
-	LangPT Lang = "pt"
-)
-
 // Localized guarda um texto nos dois idiomas da coleção.
 type Localized struct {
 	EN string `json:"en,omitempty"`

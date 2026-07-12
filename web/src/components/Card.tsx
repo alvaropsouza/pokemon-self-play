@@ -1,6 +1,7 @@
+import { useContext } from 'react'
 import type { CardView, PokemonView } from '../api'
 import { energyStyle } from '../energy'
-import { usePreview } from '../preview'
+import { PreviewCtx } from '../preview'
 
 // Carta de energia desenhada em CSS: energias básicas do TCGdex não têm imagem.
 function EnergyFace({ c }: { c: CardView }) {
@@ -17,17 +18,23 @@ function EnergyFace({ c }: { c: CardView }) {
 // Carta genérica: imagem quando existe; energia sem imagem vira EnergyFace;
 // demais sem imagem, fallback textual. Overlays de dano e condições quando o
 // view é um Pokémon em jogo. Hover publica a carta no painel de preview.
-export function Card({ view, selected, onClick }: {
+export function Card({ view, selected, onClick, dragData }: {
   view: CardView | PokemonView
   selected?: boolean
   onClick?: () => void
+  // Valor posto no dataTransfer ao arrastar (carta da mão arrastável).
+  dragData?: string
 }) {
   const c = 'card' in view ? view.card : view
   const pk = 'card' in view ? view : null
-  const setPreview = usePreview()
+  const setPreview = useContext(PreviewCtx)
   const cls = 'cardbox' + (onClick ? ' click' : '') + (selected ? ' sel' : '')
   return (
     <div className={cls} onClick={onClick}
+      draggable={dragData !== undefined}
+      onDragStart={dragData !== undefined
+        ? e => e.dataTransfer.setData('text/plain', dragData)
+        : undefined}
       onMouseEnter={() => setPreview(c)} onMouseLeave={() => setPreview(null)}>
       {c.image
         ? <img className="card" src={c.image} title={c.name} alt={c.name} />
@@ -46,15 +53,23 @@ export function EmptySlot() {
 
 // Slot de Pokémon em jogo (ativo/banco); vazio vira slot tracejado.
 // Energias ligadas aparecem como bolinhas coloridas por elemento.
-export function PokemonSlot({ view, selected, onClick }: {
+export function PokemonSlot({ view, selected, onClick, onDropCard }: {
   view: PokemonView | null | undefined
   selected?: boolean
   onClick?: () => void
+  // Recebe o dataTransfer de uma carta da mão largada neste Pokémon.
+  onDropCard?: (data: string) => void
 }) {
   if (!view) return <div><EmptySlot /></div>
   const energies = view.energies ?? []
+  const droppable = onDropCard !== undefined
   return (
-    <div>
+    <div
+      onDragOver={droppable ? e => e.preventDefault() : undefined}
+      onDrop={droppable ? e => {
+        e.preventDefault()
+        onDropCard(e.dataTransfer.getData('text/plain'))
+      } : undefined}>
       <Card view={view} selected={selected} onClick={onClick} />
       {(energies.length > 0 || view.tool) && (
         <div className="sub">

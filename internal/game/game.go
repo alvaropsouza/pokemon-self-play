@@ -37,6 +37,9 @@ const (
 	CondParalyzed Condition = "paralyzed"
 )
 
+// condPT nomeia em PT as condições que bloqueiam atacar/recuar (mensagens de erro).
+var condPT = map[Condition]string{CondAsleep: "Adormecido", CondParalyzed: "Paralisado"}
+
 // ActiveSlot referencia o Pokémon Ativo em parâmetros de alvo; índices ≥ 0
 // referenciam posições do Banco.
 const ActiveSlot = -1
@@ -192,9 +195,6 @@ func New(store *cards.Store, decks [2][]string, seed int64, firstPlayer int) (*G
 	}
 	return g, nil
 }
-
-// Store expõe a base de cartas usada pela partida (consulta).
-func (g *Game) Store() *cards.Store { return g.store }
 
 // Card devolve a carta canônica de um ID (nil se desconhecido).
 func (g *Game) Card(id string) *cards.Card { return g.store.Cards[id] }
