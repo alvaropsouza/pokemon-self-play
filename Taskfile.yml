@@ -19,6 +19,36 @@ tasks:
     cmds:
       - go run ./cmd/play -mytype {{.MYTYPE}} -bottype {{.BOTTYPE}} -seed {{.SEED}}
 
+  dev:
+    desc: "Dev com reload: Vite (HMR) em :5173 + backend reiniciado ao mudar .go (vars: MYTYPE, BOTTYPE, SEED)"
+    # watch: true só vale em task executada diretamente (não como dep), por
+    # isso o backend entra via subprocesso `task dev-api`.
+    deps: [web, dev-api-watch]
+
+  dev-api-watch:
+    internal: true
+    cmds:
+      - task dev-api MYTYPE={{.MYTYPE | default "Fire"}} BOTTYPE={{.BOTTYPE | default "Water"}} SEED={{.SEED | default "7"}}
+
+  dev-api:
+    desc: "Backend em watch: recompila e reinicia ao mudar arquivos .go"
+    watch: true
+    # sem fingerprint: servidor é processo longo, tem que rodar sempre
+    method: none
+    sources:
+      - "cmd/**/*.go"
+      - "internal/**/*.go"
+      - "web/*.go"
+    vars:
+      MYTYPE: '{{.MYTYPE | default "Fire"}}'
+      BOTTYPE: '{{.BOTTYPE | default "Water"}}'
+      SEED: '{{.SEED | default "7"}}'
+    cmds:
+      # binário direto (não `go run`): o watch mata o processo na troca; go run
+      # no Windows órfã o filho e o :8080 fica preso
+      - go build -o bin/play{{exeExt}} ./cmd/play
+      - bin/play{{exeExt}} -mytype {{.MYTYPE}} -bottype {{.BOTTYPE}} -seed {{.SEED}}
+
   web-build:
     desc: "Compila o frontend (Vite + React) para web/dist (embutido no binário)"
     dir: web
