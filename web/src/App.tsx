@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { fetchState, postAction, postNew, type CardView, type GameConfig, type GameState } from './api'
-import type { Sel } from './selection'
+import { fetchState, postAction, postNew, type CardView, type GameConfig, type GameState, type Sel } from './api'
 import { CardPreview, PreviewCtx, type Preview } from './preview'
 import { Sidebar } from './components/Sidebar'
 import { BotMat, YouMat } from './components/Mat'

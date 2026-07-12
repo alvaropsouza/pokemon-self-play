@@ -1,5 +1,5 @@
 import type { CardView, SideView } from '../api'
-import type { Sel } from '../selection'
+import type { Sel } from '../api'
 import { Card, DeckPile, DiscardPile, EmptySlot, PokemonSlot } from './Card'
 
 function Bench({ side, isYou, sel, onSelect, onDropHand, dragBench, pickMode }: {

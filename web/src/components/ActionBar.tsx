@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { GameState } from '../api'
-import type { Sel } from '../selection'
+import type { Sel } from '../api'
 import { energyColor } from '../energy'
 
 function TurnTimer({ turn, current }: { turn: number; current: number }) {

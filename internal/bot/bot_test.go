@@ -56,24 +56,19 @@ func TestBotVsBotFullGame(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		p0, p1 := &Pilot{Player: 0}, &Pilot{Player: 1}
-		if err := p0.Setup(g); err != nil {
+		if err := Setup(g, 0); err != nil {
 			t.Fatal(err)
 		}
-		if err := p1.Setup(g); err != nil {
+		if err := Setup(g, 1); err != nil {
 			t.Fatal(err)
 		}
 		for i := 0; i < 500 && g.Phase == game.PhaseTurn; i++ {
-			p0.PromoteIfNeeded(g)
-			p1.PromoteIfNeeded(g)
+			PromoteIfNeeded(g, 0)
+			PromoteIfNeeded(g, 1)
 			if g.Phase != game.PhaseTurn {
 				break
 			}
-			if g.Current == 0 {
-				p0.TakeTurn(g)
-			} else {
-				p1.TakeTurn(g)
-			}
+			TakeTurn(g, g.Current)
 		}
 		if g.Phase != game.PhaseFinished {
 			t.Fatalf("seed %d: partida não terminou em 500 iterações\nlog: %v", seed, g.Log[len(g.Log)-10:])

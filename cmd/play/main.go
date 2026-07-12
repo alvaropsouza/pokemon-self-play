@@ -32,7 +32,6 @@ type server struct {
 	mu    sync.Mutex
 	store *cards.Store
 	g     *game.Game
-	pilot *bot.Pilot
 }
 
 func main() {
@@ -99,8 +98,7 @@ func (s *server) handleNew(w http.ResponseWriter, r *http.Request) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.g = g
-	s.pilot = &bot.Pilot{Player: botP}
-	if err := s.pilot.Setup(g); err != nil {
+	if err := bot.Setup(g, botP); err != nil {
 		s.g = nil
 		log.Printf("[new] erro setup bot: %v", err)
 		writeJSON(w, map[string]any{"phase": "lobby", "error": err.Error()})
@@ -122,14 +120,14 @@ func buildDeck(store *cards.Store, typ string, seed int64) (*deck.Deck, error) {
 // advance faz o bot agir sempre que for a vez dele (promoção e turno completo).
 func (s *server) advance() {
 	for s.g.Phase == game.PhaseTurn {
-		s.pilot.PromoteIfNeeded(s.g)
+		bot.PromoteIfNeeded(s.g, botP)
 		if s.g.NeedPromote[human] {
 			return // aguarda o humano promover
 		}
 		if s.g.Current != botP {
 			return
 		}
-		s.pilot.TakeTurn(s.g)
+		bot.TakeTurn(s.g, botP)
 	}
 }
 

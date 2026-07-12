@@ -56,6 +56,12 @@ export interface GameConfig {
   bottype: string
 }
 
+export type Sel =
+  | { kind: 'hand' | 'active' | 'bench'; idx: number }
+  | { kind: 'pending'; action: string; handIdx: number }
+  | { kind: 'retreating'; benchIdx: number | null; energyIdxs: number[] }
+  | null
+
 export async function fetchState(): Promise<GameState> {
   const r = await fetch('/api/state')
   return r.json()
