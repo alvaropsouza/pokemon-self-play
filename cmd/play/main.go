@@ -79,16 +79,19 @@ func (s *server) handleNew(w http.ResponseWriter, r *http.Request) {
 
 	myDeck, err := buildDeck(s.store, req.MyType, req.Seed)
 	if err != nil {
+		log.Printf("[new] erro deck jogador (%s): %v", req.MyType, err)
 		writeJSON(w, map[string]any{"phase": "lobby", "error": err.Error()})
 		return
 	}
 	botDeck, err := buildDeck(s.store, req.BotType, req.Seed+1)
 	if err != nil {
+		log.Printf("[new] erro deck bot (%s): %v", req.BotType, err)
 		writeJSON(w, map[string]any{"phase": "lobby", "error": err.Error()})
 		return
 	}
 	g, err := game.New(s.store, [2][]string{myDeck.CardIDs(), botDeck.CardIDs()}, req.Seed, -1)
 	if err != nil {
+		log.Printf("[new] erro game.New: %v", err)
 		writeJSON(w, map[string]any{"phase": "lobby", "error": err.Error()})
 		return
 	}
@@ -99,10 +102,12 @@ func (s *server) handleNew(w http.ResponseWriter, r *http.Request) {
 	s.pilot = &bot.Pilot{Player: botP}
 	if err := s.pilot.Setup(g); err != nil {
 		s.g = nil
+		log.Printf("[new] erro setup bot: %v", err)
 		writeJSON(w, map[string]any{"phase": "lobby", "error": err.Error()})
 		return
 	}
-	log.Printf("nova partida: você %s | bot %s | seed %d", req.MyType, req.BotType, req.Seed)
+	log.Printf("[new] partida: você %s (%d cartas) | bot %s (%d cartas) | seed %d",
+		req.MyType, myDeck.Size(), req.BotType, botDeck.Size(), req.Seed)
 	writeJSON(w, s.stateJSON())
 }
 
@@ -155,6 +160,7 @@ func (s *server) handleAction(w http.ResponseWriter, r *http.Request) {
 	defer s.mu.Unlock()
 
 	if s.g == nil {
+		log.Printf("[action] %s: sem partida ativa", req.Action)
 		writeJSON(w, map[string]any{"phase": "lobby", "error": "sem partida ativa"})
 		return
 	}
@@ -163,51 +169,71 @@ func (s *server) handleAction(w http.ResponseWriter, r *http.Request) {
 	var err error
 	switch req.Action {
 	case "place_active":
+		log.Printf("[action] place_active hand=%d", req.Hand)
 		err = g.PlaceActive(human, req.Hand)
 	case "place_bench":
+		log.Printf("[action] place_bench hand=%d", req.Hand)
 		err = g.PlaceBench(human, req.Hand)
 	case "finish_setup":
+		log.Printf("[action] finish_setup")
 		err = g.FinishSetup(human)
 	case "attach_energy":
+		log.Printf("[action] attach_energy hand=%d slot=%d", req.Hand, req.Slot)
 		err = g.AttachEnergy(human, req.Hand, req.Slot)
 	case "evolve":
+		log.Printf("[action] evolve hand=%d slot=%d", req.Hand, req.Slot)
 		err = g.Evolve(human, req.Hand, req.Slot)
 	case "attach_tool":
+		log.Printf("[action] attach_tool hand=%d slot=%d", req.Hand, req.Slot)
 		err = g.AttachTool(human, req.Hand, req.Slot)
 	case "play_item":
+		log.Printf("[action] play_item hand=%d", req.Hand)
 		err = g.PlayItem(human, req.Hand)
 	case "play_supporter":
+		log.Printf("[action] play_supporter hand=%d", req.Hand)
 		err = g.PlaySupporter(human, req.Hand)
 	case "play_stadium":
+		log.Printf("[action] play_stadium hand=%d", req.Hand)
 		err = g.PlayStadium(human, req.Hand)
 	case "retreat":
+		log.Printf("[action] retreat bench=%d energies=%v", req.Bench, req.Energies)
 		err = g.Retreat(human, req.Bench, req.Energies)
 	case "attack":
+		log.Printf("[action] attack idx=%d", req.Attack)
 		err = g.Attack(human, req.Attack)
 	case "promote":
+		log.Printf("[action] promote bench=%d", req.Bench)
 		err = g.Promote(human, req.Bench)
 	case "end_turn":
+		log.Printf("[action] end_turn turno=%d", g.TurnNumber)
 		err = g.EndTurn(human)
-	// Arbitragem manual de efeitos de carta.
 	case "arb_damage":
+		log.Printf("[arb] damage player=%d slot=%d amount=%d", req.Player, req.Slot, req.Amount)
 		err = g.ApplyDamage(req.Player, req.Slot, req.Amount)
 	case "arb_heal":
+		log.Printf("[arb] heal player=%d slot=%d amount=%d", req.Player, req.Slot, req.Amount)
 		err = g.Heal(req.Player, req.Slot, req.Amount)
 	case "arb_condition":
+		log.Printf("[arb] condition player=%d condition=%q", req.Player, req.Condition)
 		err = g.SetCondition(req.Player, req.Condition)
 	case "arb_draw":
+		log.Printf("[arb] draw player=%d amount=%d", req.Player, req.Amount)
 		g.DrawCards(req.Player, req.Amount)
 	case "arb_switch":
+		log.Printf("[arb] switch player=%d bench=%d", req.Player, req.Bench)
 		err = g.SwitchActive(req.Player, req.Bench)
 	case "arb_shuffle":
+		log.Printf("[arb] shuffle player=%d", req.Player)
 		g.ShuffleDeck(req.Player)
 	default:
 		err = fmt.Errorf("ação desconhecida: %q", req.Action)
+		log.Printf("[action] %v", err)
 	}
 	s.advance()
 
 	resp := s.stateJSON()
 	if err != nil {
+		log.Printf("[action] erro %s: %v", req.Action, err)
 		resp["error"] = err.Error()
 	}
 	writeJSON(w, resp)
