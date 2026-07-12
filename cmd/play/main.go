@@ -14,6 +14,7 @@ import (
 	"net/http"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/alvaropsouza/pokemon-self-play/internal/bot"
 	"github.com/alvaropsouza/pokemon-self-play/internal/cards"
@@ -73,7 +74,7 @@ func (s *server) handleNew(w http.ResponseWriter, r *http.Request) {
 	req.Seed = 1
 	json.NewDecoder(r.Body).Decode(&req)
 	if req.Seed <= 0 {
-		req.Seed = 1
+		req.Seed = time.Now().UnixNano()
 	}
 
 	myDeck, err := buildDeck(s.store, req.MyType, req.Seed)

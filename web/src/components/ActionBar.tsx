@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
 import type { GameState } from '../api'
 import type { Sel } from '../selection'
+import { energyColor } from '../energy'
 
-// Cronômetro do turno atual (client-side; o motor não tem relógio).
 function TurnTimer({ turn, current }: { turn: number; current: number }) {
   const [sec, setSec] = useState(0)
   useEffect(() => {
@@ -15,90 +15,167 @@ function TurnTimer({ turn, current }: { turn: number; current: number }) {
   return <span className="timer">{mm}:{ss}</span>
 }
 
+// Custo de energia como bolinhas coloridas dentro do botão de ataque.
+function EnergyCost({ cost }: { cost: string[] | null }) {
+  if (!cost?.length) return null
+  return (
+    <span className="btn-cost">
+      {cost.map((t, i) => (
+        <span key={i} className="edot" style={{ background: energyColor(t) }} title={t} />
+      ))}
+    </span>
+  )
+}
+
+// Rótulos das fases para o jogador — oculta strings internas do motor.
+const PHASE_LABEL: Record<string, string> = {
+  setup: 'Preparação',
+  'playing-first': '1º Turno',
+  playing: 'Em jogo',
+}
+
 type Post = (body: Record<string, unknown>) => void
+type SetSel = React.Dispatch<React.SetStateAction<Sel>>
 
-// Alvo em jogo escolhido (ou pergunta): -1 ativo, 0.. banco.
-function chosenSlot(sel: Sel): number | null {
-  if (sel?.kind === 'active') return -1
-  if (sel?.kind === 'bench') return sel.idx
-  const v = prompt('Alvo: -1 = Ativo, 0.. = posição do banco', '-1')
-  return v === null ? null : parseInt(v)
-}
-
-function retreat(s: GameState, post: Post) {
-  const b = prompt('Trocar com qual posição do banco? (0..)', '0')
-  if (b === null) return
-  const cost = s.you.active?.card.retreat ?? 0
-  let en: number[] = []
-  if (cost > 0) {
-    const e = prompt(`Custo ${cost}: índices das energias a descartar (ex.: 0,1)`,
-      Array.from({ length: cost }, (_, i) => i).join(','))
-    if (e === null) return
-    en = e.split(',').filter(x => x !== '').map(Number)
-  }
-  post({ action: 'retreat', bench: parseInt(b), energies: en })
-}
-
-// Botões contextuais: dependem da fase, da vez e da carta/slot selecionado.
-export function ActionBar({ s, sel, err, post }: {
+export function ActionBar({ s, sel, setSel, err, post }: {
   s: GameState
   sel: Sel
+  setSel: SetSel
   err: string
   post: Post
 }) {
   const myTurn = s.current === 0
+  const phaseTxt = PHASE_LABEL[s.phase] ?? s.phase
 
   const actions: React.ReactNode[] = []
-  const btn = (label: string, fn: () => void, primary = false) => (
-    <button key={label} className={primary ? 'primary' : ''} onClick={fn}>{label}</button>
+
+  // Botão de ação: ataque = primary, utilitário = secondary.
+  const attack = (label: React.ReactNode, fn: () => void, key: string) => (
+    <button key={key} className="primary" onClick={fn}>{label}</button>
+  )
+  const util = (label: string, fn: () => void, key?: string) => (
+    <button key={key ?? label} onClick={fn}>{label}</button>
+  )
+  const critical = (label: string, fn: () => void, key?: string) => (
+    <button key={key ?? label} className="primary" onClick={fn}>{label}</button>
   )
 
   if (s.phase === 'setup') {
     actions.push(<span key="msg">Setup: escolha seu Ativo e Banco (cartas da mão).</span>)
     if (sel?.kind === 'hand') {
-      if (!s.you.active) actions.push(btn('Colocar como Ativo', () => post({ action: 'place_active', hand: sel.idx }), true))
-      else actions.push(btn('Colocar no Banco', () => post({ action: 'place_bench', hand: sel.idx }), true))
+      if (!s.you.active) actions.push(critical('Colocar como Ativo', () => post({ action: 'place_active', hand: sel.idx })))
+      else actions.push(critical('Colocar no Banco', () => post({ action: 'place_bench', hand: sel.idx })))
     }
-    if (s.you.active) actions.push(btn('Concluir setup', () => post({ action: 'finish_setup' })))
+    if (s.you.active) actions.push(util('Concluir setup', () => post({ action: 'finish_setup' })))
+
   } else if (s.needPromote?.[0]) {
     actions.push(<span key="msg">Seu Ativo caiu — clique num Pokémon do banco e promova.</span>)
-    if (sel?.kind === 'bench') actions.push(btn('Promover', () => post({ action: 'promote', bench: sel.idx }), true))
+    if (sel?.kind === 'bench') actions.push(critical('Promover', () => post({ action: 'promote', bench: sel.idx })))
+
   } else if (s.current !== 0) {
-    actions.push(<span key="msg">Turno do bot…</span>)
+    actions.push(<span key="msg" style={{ color: 'var(--dim)' }}>Turno do bot…</span>)
+
+  } else if (sel?.kind === 'pending') {
+    // Modo pick: aguardando clique num slot do tabuleiro.
+    const labels: Record<string, string> = {
+      attach_energy: 'energia',
+      evolve: 'Pokémon para evoluir',
+      attach_tool: 'Pokémon para a ferramenta',
+    }
+    actions.push(
+      <span key="hint" className="pick-hint">↑ Clique no {labels[sel.action] ?? 'alvo'} no tabuleiro</span>,
+      util('Cancelar', () => setSel(null), 'cancel'),
+    )
+
+  } else if (sel?.kind === 'retreating') {
+    if (sel.benchIdx === null) {
+      // Passo 1: escolher slot do banco.
+      actions.push(
+        <span key="hint" className="pick-hint">↑ Clique no Pokémon do Banco para onde recuar</span>,
+        util('Cancelar', () => setSel(null), 'cancel'),
+      )
+    } else {
+      // Passo 2: selecionar energias a descartar.
+      const cost = s.you.active?.card.retreat ?? 0
+      const energies = s.you.active?.energies ?? []
+      const chosen = sel.energyIdxs
+
+      const toggleEnergy = (i: number) => {
+        const next = chosen.includes(i) ? chosen.filter(x => x !== i) : [...chosen, i]
+        setSel({ kind: 'retreating', benchIdx: sel.benchIdx, energyIdxs: next })
+      }
+
+      const canConfirm = cost === 0 || chosen.length === cost
+
+      actions.push(
+        <span key="retreat-label" className="retreat-prompt">
+          {cost > 0
+            ? <>Descartar {cost} energia{cost !== 1 ? 's' : ''}:{' '}
+                {energies.map((e, i) => (
+                  <span key={i}
+                    className={'edot selectable' + (chosen.includes(i) ? ' chosen' : '')}
+                    style={{ background: energyColor(e.nameEN) }}
+                    title={e.name}
+                    onClick={() => toggleEnergy(i)} />
+                ))}
+              </>
+            : <span>Recuo gratuito</span>
+          }
+        </span>,
+        <button key="confirm" className={canConfirm ? 'primary' : ''} disabled={!canConfirm}
+          onClick={() => { post({ action: 'retreat', bench: sel.benchIdx!, energies: chosen }); setSel(null) }}>
+          Confirmar Recuo
+        </button>,
+        util('Cancelar', () => setSel(null), 'cancel'),
+      )
+    }
+
   } else {
+    // Turno normal.
     if (sel?.kind === 'hand') {
       const c = s.you.hand![sel.idx]
-      if (c.category === 'Energy') actions.push(btn('Ligar Energia', () => {
-        const s2 = chosenSlot(sel); if (s2 !== null) post({ action: 'attach_energy', hand: sel.idx, slot: s2 })
-      }, true))
-      if (c.category === 'Pokemon' && c.stage === 'Basic') actions.push(btn('Baixar no Banco', () => post({ action: 'place_bench', hand: sel.idx }), true))
-      if (c.category === 'Pokemon' && c.stage !== 'Basic') actions.push(btn('Evoluir', () => {
-        const s2 = chosenSlot(sel); if (s2 !== null) post({ action: 'evolve', hand: sel.idx, slot: s2 })
-      }, true))
-      if (c.trainerType === 'Item') actions.push(btn('Jogar Item', () => post({ action: 'play_item', hand: sel.idx }), true))
-      if (c.trainerType === 'Supporter') actions.push(btn('Jogar Suporte', () => post({ action: 'play_supporter', hand: sel.idx }), true))
-      if (c.trainerType === 'Stadium') actions.push(btn('Jogar Estádio', () => post({ action: 'play_stadium', hand: sel.idx }), true))
-      if (c.trainerType === 'Tool') actions.push(btn('Ligar Ferramenta', () => {
-        const s2 = chosenSlot(sel); if (s2 !== null) post({ action: 'attach_tool', hand: sel.idx, slot: s2 })
-      }, true))
+      if (c.category === 'Energy') {
+        actions.push(util('Ligar Energia', () => setSel({ kind: 'pending', action: 'attach_energy', handIdx: sel.idx })))
+      }
+      if (c.category === 'Pokemon' && c.stage === 'Basic') {
+        actions.push(util('Baixar no Banco', () => post({ action: 'place_bench', hand: sel.idx })))
+      }
+      if (c.category === 'Pokemon' && c.stage !== 'Basic') {
+        actions.push(util('Evoluir', () => setSel({ kind: 'pending', action: 'evolve', handIdx: sel.idx })))
+      }
+      if (c.trainerType === 'Item') actions.push(util('Jogar Item', () => post({ action: 'play_item', hand: sel.idx })))
+      if (c.trainerType === 'Supporter') actions.push(util('Jogar Suporte', () => post({ action: 'play_supporter', hand: sel.idx })))
+      if (c.trainerType === 'Stadium') actions.push(util('Jogar Estádio', () => post({ action: 'play_stadium', hand: sel.idx })))
+      if (c.trainerType === 'Tool') {
+        actions.push(util('Ligar Ferramenta', () => setSel({ kind: 'pending', action: 'attach_tool', handIdx: sel.idx })))
+      }
     }
+
     if (s.you.active) {
       s.you.active.card.attacks?.forEach((a, i) => {
-        actions.push(btn(`${a.name} (${a.damage || 'efeito'})`, () => post({ action: 'attack', attack: i }), true))
+        actions.push(
+          attack(
+            <><EnergyCost cost={a.cost} />{a.name} ({a.damage || 'efeito'})</>,
+            () => post({ action: 'attack', attack: i }),
+            `attack-${i}`,
+          )
+        )
       })
-      if (s.you.bench?.length) actions.push(btn('Recuar', () => retreat(s, post)))
+      if (s.you.bench?.length) {
+        actions.push(util('Recuar', () => setSel({ kind: 'retreating', benchIdx: null, energyIdxs: [] })))
+      }
     }
   }
 
   return (
-    <div id="actionbar" className={err ? 'err' : ''}>
+    <div id="actionbar">
       <span id="status">
         <span className={'vez ' + (myTurn ? 'you' : 'bot')}>{myTurn ? 'SUA VEZ' : 'VEZ DO BOT'}</span>
-        <span>Turno {s.turn} · {s.phase}</span>
+        <span>Turno {s.turn} · {phaseTxt}</span>
         <TurnTimer turn={s.turn} current={s.current} />
-        {err && <span className="err">{err}</span>}
       </span>
       <span id="actions">{actions}</span>
+      {err && <div className="err-banner">{err}</div>}
     </div>
   )
 }

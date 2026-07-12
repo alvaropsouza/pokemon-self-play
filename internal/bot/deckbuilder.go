@@ -13,13 +13,16 @@ import (
 	"github.com/alvaropsouza/pokemon-self-play/internal/deck"
 )
 
+const (
+	pokemonTarget = 16
+	energyTarget  = 10
+)
+
 // BuildDeck monta um deck de 60 cartas do(s) tipo(s) dado(s) usando o pool da
 // base. Determinístico: mesmo pool + tipos + seed → mesmo deck.
 //
-// Esqueleto: linhas de evolução do tipo (básico + estágios do pool) até ~20
-// Pokémon, completado com Energias Básicas do tipo principal. Treinadores
-// ficam de fora enquanto o bot não sabe usá-los (efeitos são arbitragem
-// manual — ver PLANO.md etapa 3).
+// Estrutura meta: ~16 Pokémon, ~10 Energia Básica, ~34 Treinadores.
+// Linha principal 4-3-2, secundária 3-2-1, treinadores em round-robin por subtipo.
 func BuildDeck(store *cards.Store, types []string, seed int64) (*deck.Deck, error) {
 	if len(types) == 0 {
 		return nil, fmt.Errorf("escolha ao menos 1 tipo")
@@ -43,9 +46,8 @@ func BuildDeck(store *cards.Store, types []string, seed int64) (*deck.Deck, erro
 		return false
 	}
 
-	// Candidatos: básicos legais do tipo, com ao menos 1 ataque com dano.
 	var basics []*cards.Card
-	evoByFrom := map[string][]*cards.Card{} // nome EN do pré-evoluído → evoluções
+	evoByFrom := map[string][]*cards.Card{}
 	for _, c := range pool {
 		if c.Category != cards.CategoryPokemon || !c.StandardLegal() || !wantType(c) {
 			continue
@@ -64,8 +66,6 @@ func BuildDeck(store *cards.Store, types []string, seed int64) (*deck.Deck, erro
 		return nil, fmt.Errorf("pool sem Pokémon Básico atacante do(s) tipo(s) %v", types)
 	}
 
-	// Variedade pela seed: embaralha e reordena estável por prioridade
-	// (linha com evolução primeiro, depois HP) — empates ficam na ordem sorteada.
 	rng.Shuffle(len(basics), func(i, j int) { basics[i], basics[j] = basics[j], basics[i] })
 	sort.SliceStable(basics, func(i, j int) bool {
 		ei, ej := len(evoByFrom[basics[i].Name.EN]) > 0, len(evoByFrom[basics[j].Name.EN]) > 0
@@ -76,49 +76,79 @@ func BuildDeck(store *cards.Store, types []string, seed int64) (*deck.Deck, erro
 	})
 
 	d := deck.New()
+	byName := map[string]int{} // name EN → total copies in deck
+
+	addCard := func(c *cards.Card, n int) int {
+		avail := 4 - byName[c.Name.EN]
+		if n > avail {
+			n = avail
+		}
+		if n <= 0 {
+			return 0
+		}
+		d.Add(c.ID, n)
+		byName[c.Name.EN] += n
+		return n
+	}
+
 	seenName := map[string]bool{}
 	pokemon := 0
-	const pokemonTarget = 20
-	for _, b := range basics {
+
+	addPoke := func(c *cards.Card, n int) {
+		if rem := pokemonTarget - pokemon; n > rem {
+			n = rem
+		}
+		got := addCard(c, n)
+		pokemon += got
+		seenName[c.Name.EN] = true
+	}
+
+	// Main line: 4-3-2
+	if len(basics) > 0 {
+		b := basics[0]
+		addPoke(b, 4)
+		if e1 := firstEvo(evoByFrom, b.Name.EN, seenName); e1 != nil {
+			addPoke(e1, 3)
+			if e2 := firstEvo(evoByFrom, e1.Name.EN, seenName); e2 != nil {
+				addPoke(e2, 2)
+			}
+		}
+	}
+
+	// Secondary lines: 3-2-1
+	for _, b := range basics[1:] {
 		if pokemon >= pokemonTarget {
 			break
 		}
 		if seenName[b.Name.EN] {
 			continue
 		}
-		seenName[b.Name.EN] = true
-		d.Add(b.ID, 3)
-		pokemon += 3
-		// Estágio 1 e, se houver, Estágio 2 da mesma linha.
+		addPoke(b, 3)
 		if e1 := firstEvo(evoByFrom, b.Name.EN, seenName); e1 != nil {
-			d.Add(e1.ID, 2)
-			pokemon += 2
-			seenName[e1.Name.EN] = true
+			addPoke(e1, 2)
 			if e2 := firstEvo(evoByFrom, e1.Name.EN, seenName); e2 != nil {
-				d.Add(e2.ID, 1)
-				pokemon++
-				seenName[e2.Name.EN] = true
+				addPoke(e2, 1)
 			}
 		}
 	}
 
-	// Completa com Energia Básica do tipo principal.
-	energyID := ""
-	wantEnergy := types[0] + " Energy"
-	for _, c := range pool {
-		if c.Category == cards.CategoryEnergy && c.EnergyType != "Special" &&
-			strings.TrimPrefix(c.Name.EN, "Basic ") == wantEnergy {
-			energyID = c.ID
-			break
-		}
-	}
+	// Energy
+	energyID := findBasicEnergy(pool, types[0])
 	if energyID == "" {
-		return nil, fmt.Errorf("pool sem %s (importe o set de energias, ex.: sve)", wantEnergy)
+		return nil, fmt.Errorf("pool sem %s Energy (importe o set de energias, ex.: sve)", types[0])
 	}
-	if d.Size() > 60 {
-		return nil, fmt.Errorf("esqueleto passou de 60 cartas (%d)", d.Size())
+	d.Add(energyID, energyTarget)
+
+	// Trainers: fill remaining slots (~34)
+	remaining := 60 - d.Size()
+	if remaining > 0 {
+		fillTrainers(d, byName, pool, rng, remaining)
 	}
-	d.Add(energyID, 60-d.Size())
+
+	// Fallback: pad with energy if no trainers available
+	if d.Size() < 60 {
+		d.Add(energyID, 60-d.Size())
+	}
 
 	if errs := d.Validate(store); len(errs) > 0 {
 		return nil, fmt.Errorf("deck gerado inválido: %v", errs)
@@ -126,7 +156,88 @@ func BuildDeck(store *cards.Store, types []string, seed int64) (*deck.Deck, erro
 	return d, nil
 }
 
-// firstEvo devolve a primeira evolução ainda não usada de um nome (nil se nenhuma).
+func findBasicEnergy(pool []*cards.Card, typ string) string {
+	want := typ + " Energy"
+	for _, c := range pool {
+		if c.Category == cards.CategoryEnergy && c.EnergyType != "Special" &&
+			strings.TrimPrefix(c.Name.EN, "Basic ") == want {
+			return c.ID
+		}
+	}
+	return ""
+}
+
+// fillTrainers preenche target slots com Treinadores legais no Standard,
+// distribuídos por subtipo em round-robin (até 4 cópias por nome).
+func fillTrainers(d *deck.Deck, byName map[string]int, pool []*cards.Card, rng *rand.Rand, target int) {
+	var supporters, items, tools, stadiums []*cards.Card
+	for _, c := range pool {
+		if c.Category != cards.CategoryTrainer || !c.StandardLegal() {
+			continue
+		}
+		if strings.Contains(strings.ToUpper(c.Rarity), "ACE SPEC") {
+			continue
+		}
+		switch c.TrainerType {
+		case "Supporter":
+			supporters = append(supporters, c)
+		case "Tool":
+			tools = append(tools, c)
+		case "Stadium":
+			stadiums = append(stadiums, c)
+		default:
+			items = append(items, c)
+		}
+	}
+	for _, g := range []*[]*cards.Card{&supporters, &items, &tools, &stadiums} {
+		rng.Shuffle(len(*g), func(i, j int) { (*g)[i], (*g)[j] = (*g)[j], (*g)[i] })
+	}
+
+	added := 0
+	// quotas: supporters ~12, items ~15, tools ~4, stadiums ~3
+	type groupSpec struct {
+		cards []*cards.Card
+		quota int
+	}
+	groups := []groupSpec{
+		{supporters, 12},
+		{items, 15},
+		{tools, 4},
+		{stadiums, 3},
+	}
+
+	addGroup := func(group []*cards.Card, quota int) {
+		if quota > target-added {
+			quota = target - added
+		}
+		for quota > 0 {
+			prev := quota
+			for _, c := range group {
+				if quota == 0 {
+					break
+				}
+				if byName[c.Name.EN] < 4 {
+					d.Add(c.ID, 1)
+					byName[c.Name.EN]++
+					added++
+					quota--
+				}
+			}
+			if quota == prev {
+				break // no progress, group exhausted
+			}
+		}
+	}
+
+	for _, g := range groups {
+		addGroup(g.cards, g.quota)
+	}
+	// Fill any remainder with items
+	if added < target {
+		addGroup(items, target-added)
+	}
+}
+
 func firstEvo(evoByFrom map[string][]*cards.Card, from string, seen map[string]bool) *cards.Card {
 	for _, e := range evoByFrom[from] {
 		if !seen[e.Name.EN] {

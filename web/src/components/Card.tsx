@@ -70,16 +70,15 @@ function HpGauge({ view }: { view: PokemonView }) {
 
 // Slot de Pokémon em jogo (ativo/banco); vazio vira slot tracejado.
 // Energias ligadas aparecem como bolinhas coloridas por elemento.
-export function PokemonSlot({ view, selected, onClick, onDropCard, dragData, placeholder }: {
+export function PokemonSlot({ view, selected, onClick, onDropCard, dragData, placeholder, picking }: {
   view: PokemonView | null | undefined
   selected?: boolean
   onClick?: () => void
-  // Recebe o dataTransfer de uma carta da mão largada neste slot (mesmo vazio).
   onDropCard?: (data: string) => void
-  // Torna o Pokémon deste slot arrastável (ex.: promover do banco).
   dragData?: string
-  // Texto do slot vazio ("+ Pokémon" no lado do jogador).
   placeholder?: string
+  // Destaque verde pulsante: slot é alvo válido no modo pick inline.
+  picking?: boolean
 }) {
   const droppable = onDropCard !== undefined
   // Realce verde do alvo durante drag-over (feedback de ação válida).
@@ -93,7 +92,7 @@ export function PokemonSlot({ view, selected, onClick, onDropCard, dragData, pla
       onDropCard(e.dataTransfer.getData('text/plain'))
     },
   } : {}
-  const cls = 'base' + (over ? ' over' : '')
+  const cls = 'base' + (over ? ' over' : '') + (picking && !over ? ' picking' : '')
   if (!view) return <div className={cls} {...dropProps}><EmptySlot label={droppable ? placeholder : undefined} /></div>
   const energies = view.energies ?? []
   return (

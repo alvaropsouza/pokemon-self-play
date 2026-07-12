@@ -25,7 +25,7 @@ function HandTray({ s, sel, onSelect }: {
           ? { transform: `rotate(${off * 2}deg) translateY(${Math.abs(off) * 3}px)` }
           : undefined
         return (
-          <div key={i} className="fan" style={fan}>
+          <div key={c.id} className="fan" style={fan}>
             <Card view={c} onClick={() => onSelect(i)}
               dragData={c.category === 'Energy' ? `energy:${i}`
                 : c.category === 'Pokemon'
@@ -66,7 +66,6 @@ const TYPES = ['Grass','Fire','Water','Lightning','Psychic','Fighting','Darkness
 function LobbyScreen({ onStart, err }: { onStart: (c: GameConfig) => void; err: string }) {
   const [mytype, setMytype] = useState('Fire')
   const [bottype, setBottype] = useState('Water')
-  const [seed, setSeed] = useState(1)
   return (
     <div id="lobby">
       <div className="lobby-box">
@@ -83,12 +82,8 @@ function LobbyScreen({ onStart, err }: { onStart: (c: GameConfig) => void; err: 
             {TYPES.map(t => <option key={t}>{t}</option>)}
           </select>
         </div>
-        <div className="lobby-row">
-          <label>Seed</label>
-          <input type="number" min={1} value={seed} onChange={e => setSeed(Math.max(1, +e.target.value))} />
-        </div>
         {err && <div className="lobby-err">{err}</div>}
-        <button className="primary" onClick={() => onStart({ mytype, bottype, seed })}>
+        <button className="primary" onClick={() => onStart({ mytype, bottype })}>
           Iniciar partida
         </button>
       </div>
@@ -114,7 +109,7 @@ function WinnerOverlay({ winner, onReplay, onNew }: { winner: number; onReplay: 
 
 export default function App() {
   const [s, setS] = useState<GameState | null>(null)
-  const [config, setConfig] = useState<GameConfig>({ mytype: 'Fire', bottype: 'Water', seed: 1 })
+  const [config, setConfig] = useState<GameConfig>({ mytype: 'Fire', bottype: 'Water' })
   const [lobbyErr, setLobbyErr] = useState('')
   const [sel, setSel] = useState<Sel>(null)
   const [err, setErr] = useState('')
@@ -148,8 +143,32 @@ export default function App() {
     })
   }, [])
 
-  const select = (kind: 'hand' | 'active' | 'bench', idx: number) =>
-    setSel(cur => (cur && cur.kind === kind && cur.idx === idx) ? null : { kind, idx })
+  const select = useCallback((kind: 'hand' | 'active' | 'bench', idx: number) => {
+    // Modo pending: clique no slot completa a ação sem prompt().
+    if (sel?.kind === 'pending') {
+      if (kind === 'active' || kind === 'bench') {
+        post({ action: sel.action, hand: sel.handIdx, slot: kind === 'active' ? -1 : idx })
+        setSel(null)
+      } else {
+        setSel({ kind: 'hand', idx })
+      }
+      return
+    }
+    // Modo retreating passo 1: escolher banco.
+    if (sel?.kind === 'retreating' && sel.benchIdx === null) {
+      if (kind === 'bench') setSel({ kind: 'retreating', benchIdx: idx, energyIdxs: [] })
+      else setSel(kind === 'hand' ? { kind: 'hand', idx } : null)
+      return
+    }
+    // Modo retreating passo 2: seleção de energias — cliques no tapete ignorados.
+    if (sel?.kind === 'retreating') return
+    // Seleção normal: toggle.
+    setSel(cur => {
+      if (!cur || cur.kind !== kind) return { kind, idx }
+      if ((cur as { kind: string; idx: number }).idx === idx) return null
+      return { kind, idx }
+    })
+  }, [sel, post])
 
   if (!s || s.phase === 'lobby') {
     return <LobbyScreen onStart={startGame} err={lobbyErr} />
@@ -163,6 +182,11 @@ export default function App() {
           <BotMat side={s.bot} stadium={s.stadium} />
           <YouMat side={s.you} sel={sel} onSelect={select}
             dragBench={!!s.needPromote?.[0]}
+            pickMode={
+              sel?.kind === 'pending' ? 'all'
+              : (sel?.kind === 'retreating' && sel.benchIdx === null) ? 'bench'
+              : null
+            }
             onDropHand={(slot, data) => {
               const [kind, idx] = data.split(':')
               const i = parseInt(idx)
@@ -176,7 +200,7 @@ export default function App() {
                 else post({ action: 'place_bench', hand: i })
               }
             }} />
-          <ActionBar s={s} sel={sel} err={err} post={post} />
+          <ActionBar s={s} sel={sel} setSel={setSel} err={err} post={post} />
           <HandTray s={s} sel={sel} onSelect={i => select('hand', i)} />
         </div>
         <RightRail pane={pane} setPane={setPane} endTurn={() => post({ action: 'end_turn' })} />

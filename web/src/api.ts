@@ -54,7 +54,6 @@ export interface GameState {
 export interface GameConfig {
   mytype: string
   bottype: string
-  seed: number
 }
 
 export async function fetchState(): Promise<GameState> {

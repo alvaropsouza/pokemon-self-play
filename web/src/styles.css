@@ -6,7 +6,8 @@
      Divisor orça 2 tapetes (banco+ativo) + barra de ações + mão sem estourar 100vh.
      350 = cromo fixo real: paddings/gaps externos + labels, HP e barra de ações
      + folga da mão (que cresce com --cw*1.25). */
-  --cw:clamp(64px, calc((100vh - 350px) / 8), 132px);
+  /* 450 = cromo real: app-padding + gaps + actionbar + hand-tray + mat-padding + labels + HP + energias */
+  --cw:clamp(60px, calc((100vh - 450px) / 8), 118px);
 }
 * { box-sizing:border-box; }
 html, body, #root { height:100%; }
@@ -14,8 +15,7 @@ body {
   margin:0; color:var(--txt); font:13px/1.4 system-ui,sans-serif; overflow:hidden;
   background:radial-gradient(1100px 700px at 50% 38%, #12121e, var(--bg) 75%);
 }
-/* padding externo maior = tabuleiro ~8% menor, respiro para animações (plano §1) */
-#app { display:grid; grid-template-columns:150px 1fr 96px; gap:14px; padding:22px 26px; height:100vh; }
+#app { display:grid; grid-template-columns:150px 1fr 96px; gap:14px; padding:16px 18px; height:100vh; }
 
 /* ---- sidebar esquerda: jogadores + prêmios ---- */
 #left { display:flex; flex-direction:column; gap:10px; overflow-y:auto; }
@@ -49,10 +49,6 @@ body {
   background:linear-gradient(transparent 45%, rgba(255,255,255,.10) 45%, rgba(255,255,255,.10) 55%, transparent 55%);
   pointer-events:none;
 }
-.mat::after { /* textura discreta de tecido no tapete (plano §5) */
-  content:''; position:absolute; inset:0; pointer-events:none;
-  background:repeating-linear-gradient(45deg, rgba(255,255,255,.03) 0 2px, transparent 2px 6px);
-}
 .mat > * { position:relative; z-index:1; min-width:0; min-height:0; overflow:hidden; }
 .mlabel { font-size:10px; font-weight:700; letter-spacing:1px; text-transform:uppercase; color:var(--matink); opacity:.85; text-align:center; margin-bottom:4px; }
 .pilescol { display:flex; flex-direction:column; justify-content:space-around; align-items:center; }
@@ -61,10 +57,12 @@ body {
 /* Estádio: zona compartilhada com formato próprio (chanfro) para destacar */
 .apoio { width:100%; flex:0 1 82%; border:2px solid rgba(255,255,255,.4); border-radius:4px 18px 4px 18px; background:rgba(255,255,255,.14); padding:6px; display:flex; flex-direction:column; align-items:center; gap:4px; }
 
-.benchrow { display:flex; gap:14px; justify-content:center; }
-/* "base" sob cada slot de Pokémon: área clicável/soltável maior (plano §17) */
-.base { border-radius:10px; padding:6px; background:rgba(255,255,255,.06); }
-.base.over { outline:2px solid var(--ok); background:rgba(87,194,107,.18); border-radius:10px; }
+.benchrow { display:flex; gap:10px; justify-content:center; }
+.base { border-radius:10px; padding:3px; background:rgba(255,255,255,.06); }
+.base.over { outline:2px solid var(--ok); background:rgba(87,194,107,.18); }
+/* slot destacado como alvo válido de pick inline */
+.base.picking { outline:2px solid var(--ok); background:rgba(87,194,107,.14); cursor:pointer; animation:pickpulse 1.5s ease-in-out infinite; }
+@keyframes pickpulse { 0%,100% { outline-color:var(--ok); } 50% { outline-color:#a3e4b2; } }
 .slot { width:var(--cw); aspect-ratio:63/88; border:2px dashed var(--matline); border-radius:8px; background:rgba(255,255,255,.08); flex:none;
         display:flex; align-items:center; justify-content:center; font-size:9px; font-weight:700; color:var(--matink); opacity:.8; text-align:center; padding:4px; }
 .activewrap { display:flex; justify-content:center; }
@@ -117,11 +115,18 @@ body {
 .vez { padding:2px 9px; border-radius:10px; font-weight:800; font-size:11px; letter-spacing:.5px; }
 .vez.you { background:var(--accent); color:#1a1a1a; }
 .vez.bot { background:#2b3352; color:var(--blue); }
-@keyframes errflash { 0% { background:rgba(255,123,107,.25); } 100% { background:transparent; } }
-#status .err { color:var(--bad); font-weight:400; border-radius:6px; padding:1px 5px; animation:errflash .5s ease-out; }
-/* glow vermelho na barra quando a ação é inválida (plano §14) */
-@keyframes errglow { 0% { border-color:var(--bad); box-shadow:0 0 12px rgba(255,123,107,.5); } }
-#actionbar.err { animation:errglow .6s ease-out; }
+/* erro persistente até próxima ação — banner dedicado abaixo das ações */
+.err-banner { width:100%; padding:5px 10px; background:rgba(255,123,107,.12); border:1px solid rgba(255,123,107,.4); border-radius:8px; color:var(--bad); font-size:12px; margin-top:4px; }
+/* instrução de pick inline */
+.pick-hint { color:var(--ok); font-size:12px; font-weight:600; display:flex; align-items:center; gap:6px; }
+/* retreat prompt: energias toggleáveis */
+.retreat-prompt { display:flex; align-items:center; gap:6px; font-size:12px; }
+.edot.selectable { cursor:pointer; transition:box-shadow .1s; }
+.edot.selectable:hover { box-shadow:0 0 0 3px rgba(255,255,255,.6); }
+.edot.chosen { box-shadow:0 0 0 3px var(--accent); }
+/* custo de energia dentro do botão de ataque */
+.btn-cost { display:inline-flex; gap:2px; margin-right:5px; vertical-align:middle; }
+.btn-cost .edot { width:10px; height:10px; border-width:1.5px; animation:none; }
 .timer { color:var(--dim); font-variant-numeric:tabular-nums; }
 #actions { display:flex; gap:6px; flex-wrap:wrap; align-items:center; }
 button { background:#222236; color:var(--txt); border:1px solid var(--line); border-radius:8px; padding:6px 12px; cursor:pointer; font-size:12px; font-family:inherit; }
@@ -131,12 +136,15 @@ button.primary { background:var(--accent); color:#1a1a1a; font-weight:700; borde
 #handtray { background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:16px 12px 6px; display:flex; gap:6px; overflow-x:auto; min-height:136px; align-items:center; justify-content:safe center; flex:none; }
 /* mão em leque: rotação/offset por carta via style inline no HandTray */
 .fan { flex:none; }
-/* carta comprada desliza para a mão (plano §15) */
+/* carta comprada desliza para a mão */
 @keyframes drawin { from { transform:translateY(24px); opacity:0; } }
 .fan .cardbox { animation:drawin .25s ease-out; }
 /* contador de dano pulsa quando muda (key pelo valor remonta o nó) */
 @keyframes dmgpop { 0% { transform:scale(1.8); } }
 .dmg { animation:dmgpop .3s ease-out; }
+/* bot pensando: elipsis animado */
+@keyframes ellipsis { 0%,20% { content:'…'; } 40% { content:'. '; } 70% { content:'.. '; } }
+#actions span[style*="dim"]::after { content:''; animation:ellipsis 1.8s infinite; }
 #handtray .card { width:clamp(92px, calc(var(--cw) * 1.25), 152px); transition:transform .15s ease-out; }
 #handtray .cardbox:hover { z-index:2; position:relative; }
 #handtray .cardbox:hover .card { transform:translateY(-10px) scale(1.07); box-shadow:0 8px 20px rgba(0,0,0,.5); }
@@ -146,8 +154,9 @@ button.primary { background:var(--accent); color:#1a1a1a; font-weight:700; borde
 #right { display:flex; flex-direction:column; gap:10px; }
 .tool { background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:14px 4px; text-align:center; cursor:pointer; color:var(--dim); font-size:10px; font-weight:700; letter-spacing:.5px; }
 .tool:hover, .tool.on { border-color:var(--accent); color:var(--txt); }
-#endturn { background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:14px 4px; color:var(--txt); font-weight:700; font-size:11px; letter-spacing:.5px; }
-#endturn:hover { border-color:var(--accent); background:#2a2a1d; }
+/* TERMINAR TURNO: ação mais importante do turno — fundo sólido, visualmente primária */
+#endturn { background:#c0392b; border:1px solid #a93226; border-radius:14px; padding:16px 4px; color:#fff; font-weight:800; font-size:12px; letter-spacing:.5px; line-height:1.3; }
+#endturn:hover { background:#a93226; border-color:#922b21; }
 #right .spacer { flex:1; }
 
 /* ---- gaveta lateral (log / arbitragem / config) ---- */
@@ -178,7 +187,7 @@ button.primary { background:var(--accent); color:#1a1a1a; font-weight:700; borde
 .tooldot { display:inline-block; min-width:13px; height:13px; border-radius:3px; background:var(--matink); color:#fff; font-size:9px; font-weight:700; line-height:13px; text-align:center; margin:0 1px; vertical-align:middle; }
 
 @media (prefers-reduced-motion: reduce) {
-  .fieldcol .cardbox, .edot, #status .err, .fan .cardbox, .dmg, #actionbar.err { animation:none; }
+  .fieldcol .cardbox, .edot, .fan .cardbox, .dmg, .base.picking { animation:none; transition:none; }
   #handtray .card, .hpbar i, .pp, #preview { transition:none; }
 }
 
