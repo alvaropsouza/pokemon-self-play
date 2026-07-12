@@ -29,6 +29,7 @@ const (
 
 type server struct {
 	mu    sync.Mutex
+	store *cards.Store
 	g     *game.Game
 	pilot *bot.Pilot
 }
@@ -36,31 +37,13 @@ type server struct {
 func main() {
 	addr := flag.String("addr", "localhost:8080", "endereço HTTP")
 	dataPath := flag.String("data", "data/cards.json", "base de cartas")
-	myType := flag.String("mytype", "Fire", "tipo do seu deck")
-	botType := flag.String("bottype", "Water", "tipo do deck do bot")
-	seed := flag.Int64("seed", 1, "seed da partida")
 	flag.Parse()
 
 	store, err := cards.Load(*dataPath)
 	if err != nil {
 		log.Fatal(err)
 	}
-	myDeck, err := buildDeck(store, *myType, *seed)
-	if err != nil {
-		log.Fatalf("deck do jogador: %v", err)
-	}
-	botDeck, err := buildDeck(store, *botType, *seed+1)
-	if err != nil {
-		log.Fatalf("deck do bot: %v", err)
-	}
-	g, err := game.New(store, [2][]string{myDeck.CardIDs(), botDeck.CardIDs()}, *seed, -1)
-	if err != nil {
-		log.Fatal(err)
-	}
-	s := &server{g: g, pilot: &bot.Pilot{Player: botP}}
-	if err := s.pilot.Setup(g); err != nil {
-		log.Fatalf("setup do bot: %v", err)
-	}
+	s := &server{store: store}
 
 	dist, err := fs.Sub(web.Dist, "dist")
 	if err != nil {
@@ -69,9 +52,57 @@ func main() {
 	http.Handle("/", http.FileServer(http.FS(dist)))
 	http.HandleFunc("/api/state", s.handleState)
 	http.HandleFunc("/api/action", s.handleAction)
+	http.HandleFunc("/api/new", s.handleNew)
 
-	log.Printf("partida em http://%s — você: %s | bot: %s | seed %d", *addr, *myType, *botType, *seed)
+	log.Printf("em http://%s", *addr)
 	log.Fatal(http.ListenAndServe(*addr, nil))
+}
+
+func (s *server) handleNew(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "POST", http.StatusMethodNotAllowed)
+		return
+	}
+	var req struct {
+		MyType  string `json:"mytype"`
+		BotType string `json:"bottype"`
+		Seed    int64  `json:"seed"`
+	}
+	req.MyType = "Fire"
+	req.BotType = "Water"
+	req.Seed = 1
+	json.NewDecoder(r.Body).Decode(&req)
+	if req.Seed <= 0 {
+		req.Seed = 1
+	}
+
+	myDeck, err := buildDeck(s.store, req.MyType, req.Seed)
+	if err != nil {
+		writeJSON(w, map[string]any{"phase": "lobby", "error": err.Error()})
+		return
+	}
+	botDeck, err := buildDeck(s.store, req.BotType, req.Seed+1)
+	if err != nil {
+		writeJSON(w, map[string]any{"phase": "lobby", "error": err.Error()})
+		return
+	}
+	g, err := game.New(s.store, [2][]string{myDeck.CardIDs(), botDeck.CardIDs()}, req.Seed, -1)
+	if err != nil {
+		writeJSON(w, map[string]any{"phase": "lobby", "error": err.Error()})
+		return
+	}
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.g = g
+	s.pilot = &bot.Pilot{Player: botP}
+	if err := s.pilot.Setup(g); err != nil {
+		s.g = nil
+		writeJSON(w, map[string]any{"phase": "lobby", "error": err.Error()})
+		return
+	}
+	log.Printf("nova partida: você %s | bot %s | seed %d", req.MyType, req.BotType, req.Seed)
+	writeJSON(w, s.stateJSON())
 }
 
 func buildDeck(store *cards.Store, typ string, seed int64) (*deck.Deck, error) {
@@ -121,6 +152,11 @@ func (s *server) handleAction(w http.ResponseWriter, r *http.Request) {
 	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
+
+	if s.g == nil {
+		writeJSON(w, map[string]any{"phase": "lobby", "error": "sem partida ativa"})
+		return
+	}
 
 	g := s.g
 	var err error
@@ -179,6 +215,10 @@ func (s *server) handleAction(w http.ResponseWriter, r *http.Request) {
 func (s *server) handleState(w http.ResponseWriter, r *http.Request) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	if s.g == nil {
+		writeJSON(w, map[string]any{"phase": "lobby"})
+		return
+	}
 	writeJSON(w, s.stateJSON())
 }
 

@@ -13,19 +13,19 @@ function PrizeColumn({ side }: { side: SideView }) {
   )
 }
 
-export function Sidebar({ you, bot }: { you: SideView; bot: SideView }) {
+export function Sidebar({ you, bot, current }: { you: SideView; bot: SideView; current: number }) {
   return (
     <aside id="left">
-      <div className="pp bot">
+      <div className={'pp bot' + (current === 1 ? ' turn' : '')}>
+        <div className="avatar">B</div>
         <div className="who">OPONENTE</div>
-        <div className="avatar">🤖</div>
-        <div className="sub">Bot</div>
+        <div className="sub">Bot · {bot.prizes} prêmios</div>
       </div>
       <PrizeColumn side={bot} />
-      <div className="pp you">
+      <div className={'pp you' + (current === 0 ? ' turn' : '')}>
+        <div className="avatar">T</div>
         <div className="who">VOCÊ</div>
-        <div className="avatar">🧑</div>
-        <div className="sub">Treinador</div>
+        <div className="sub">Treinador · {you.prizes} prêmios</div>
       </div>
       <PrizeColumn side={you} />
     </aside>

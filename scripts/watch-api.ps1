@@ -1,12 +1,3 @@
-param(
-    [string]$MyType  = "",
-    [string]$BotType = "",
-    [string]$Seed    = ""
-)
-if (-not $MyType)  { $MyType  = if ($env:MYTYPE)  { $env:MYTYPE }  else { "Fire" } }
-if (-not $BotType) { $BotType = if ($env:BOTTYPE) { $env:BOTTYPE } else { "Water" } }
-if (-not $Seed)    { $Seed    = if ($env:SEED)    { $env:SEED }    else { "7" } }
-
 $ErrorActionPreference = "SilentlyContinue"
 $proc = $null
 
@@ -18,8 +9,7 @@ function Restart-Server {
     Write-Host "building..."
     & go build -o bin/play.exe ./cmd/play
     if ($LASTEXITCODE -ne 0) { Write-Host "build failed, waiting for fix..."; return }
-    $script:proc = Start-Process -PassThru -NoNewWindow `
-        bin/play.exe -ArgumentList "-mytype $MyType","-bottype $BotType","-seed $Seed"
+    $script:proc = Start-Process -PassThru -NoNewWindow bin/play.exe
     Write-Host "server started (pid $($script:proc.Id))"
 }
 

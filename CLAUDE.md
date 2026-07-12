@@ -42,6 +42,8 @@ Roadmap com todas as etapas e o que está pronto: **`PLANO.md`**.
 - `task web` — frontend em modo dev (Vite com HMR, proxy /api → :8080; rodar `task play` junto).
 - Equivalentes diretos: `go run ./cmd/play ...`, `go run ./cmd/import ...`, `go test ./...`.
 
+**Desenvolvimento (importante para o Claude):** ao trabalhar em mudanças em dev, o usuário já está com os servidores rodando (`task play` + `task web`). **Não iniciar servidores** e **não usar Playwright/browser para validar** — o usuário sempre valida visualmente por conta própria em http://localhost:5173. Após mudanças no frontend, basta garantir que compila (`npx tsc --noEmit` em web/) e avisar que está pronto para validação. **Arquivos temporários** (scripts descartáveis, screenshots, saídas de debug) devem ser **deletados após o uso** — não deixar lixo no repositório.
+
 Nota: campo `legal.standard` dos sets no TCGdex é desatualizado/incorreto — legalidade sempre pelo `regulationMark` da carta (ver `Card.StandardLegal`).
 
 Este documento é a referência canônica de regras para todas as fases. Formato: **Standard** (ver seção Formato e Legalidade).

@@ -124,11 +124,12 @@ func (b *Pilot) energyInHand(g *game.Game) int {
 	return -1
 }
 
-// bestPaidAttack devolve o índice do ataque pago de maior dano (-1 se nenhum).
-// Usa uma tentativa a seco: valida custo pelas energias ligadas.
+// bestPaidAttack devolve o índice do ataque pago de maior dano (≥1), ou -1.
+// Ataques de custo vazio com dano 0 (efeito puro) são ignorados: o bot não
+// pode resolver efeitos, então atacar com eles só desperdiça o turno.
 func (b *Pilot) bestPaidAttack(g *game.Game, pk *game.PokemonInPlay) int {
 	c := g.Card(pk.TopID())
-	best, bestDmg := -1, -1
+	best, bestDmg := -1, 0 // piso 0: exige dano real para atacar
 	for i, atk := range c.Attacks {
 		if !g.CostPaid(pk, atk.Cost) {
 			continue

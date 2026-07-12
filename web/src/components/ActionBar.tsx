@@ -1,5 +1,19 @@
+import { useEffect, useState } from 'react'
 import type { GameState } from '../api'
 import type { Sel } from '../selection'
+
+// Cronômetro do turno atual (client-side; o motor não tem relógio).
+function TurnTimer({ turn, current }: { turn: number; current: number }) {
+  const [sec, setSec] = useState(0)
+  useEffect(() => {
+    setSec(0)
+    const id = setInterval(() => setSec(v => v + 1), 1000)
+    return () => clearInterval(id)
+  }, [turn, current])
+  const mm = String(Math.floor(sec / 60)).padStart(2, '0')
+  const ss = String(sec % 60).padStart(2, '0')
+  return <span className="timer">{mm}:{ss}</span>
+}
 
 type Post = (body: Record<string, unknown>) => void
 
@@ -32,7 +46,7 @@ export function ActionBar({ s, sel, err, post }: {
   err: string
   post: Post
 }) {
-  const status = `Turno ${s.turn} — ${s.current === 0 ? 'sua vez' : 'vez do bot'} · fase: ${s.phase}`
+  const myTurn = s.current === 0
 
   const actions: React.ReactNode[] = []
   const btn = (label: string, fn: () => void, primary = false) => (
@@ -70,17 +84,19 @@ export function ActionBar({ s, sel, err, post }: {
     }
     if (s.you.active) {
       s.you.active.card.attacks?.forEach((a, i) => {
-        actions.push(btn(`⚔ ${a.name} (${a.damage || 'efeito'})`, () => post({ action: 'attack', attack: i }), true))
+        actions.push(btn(`${a.name} (${a.damage || 'efeito'})`, () => post({ action: 'attack', attack: i }), true))
       })
       if (s.you.bench?.length) actions.push(btn('Recuar', () => retreat(s, post)))
     }
   }
 
   return (
-    <div id="actionbar">
+    <div id="actionbar" className={err ? 'err' : ''}>
       <span id="status">
-        {status}
-        {err && <span className="err">⚠ {err}</span>}
+        <span className={'vez ' + (myTurn ? 'you' : 'bot')}>{myTurn ? 'SUA VEZ' : 'VEZ DO BOT'}</span>
+        <span>Turno {s.turn} · {s.phase}</span>
+        <TurnTimer turn={s.turn} current={s.current} />
+        {err && <span className="err">{err}</span>}
       </span>
       <span id="actions">{actions}</span>
     </div>

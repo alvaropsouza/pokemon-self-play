@@ -11,27 +11,18 @@ tasks:
     silent: true
 
   play:
-    desc: "Partida contra o bot em http://localhost:8080 (vars: MYTYPE, BOTTYPE, SEED)"
-    vars:
-      MYTYPE: '{{.MYTYPE | default "Fire"}}'
-      BOTTYPE: '{{.BOTTYPE | default "Water"}}'
-      SEED: '{{.SEED | default "7"}}'
+    desc: "Partida contra o bot em http://localhost:8080 (config via tela de lobby)"
     cmds:
-      - go run ./cmd/play -mytype {{.MYTYPE}} -bottype {{.BOTTYPE}} -seed {{.SEED}}
+      - go run ./cmd/play
 
   dev:
-    desc: "Dev com reload: Vite (HMR) em :5173 + backend reiniciado ao mudar .go (vars: MYTYPE, BOTTYPE, SEED)"
+    desc: "Dev com reload: Vite (HMR) em :5173 + backend reiniciado ao mudar .go"
     deps: [web, dev-api]
 
   dev-api:
     desc: "Backend em watch: recompila e reinicia ao mudar arquivos .go"
-    vars:
-      MYTYPE: '{{.MYTYPE | default "Fire"}}'
-      BOTTYPE: '{{.BOTTYPE | default "Water"}}'
-      SEED: '{{.SEED | default "7"}}'
     cmds:
       - powershell -ExecutionPolicy Bypass -File scripts/watch-api.ps1
-          -MyType {{.MYTYPE}} -BotType {{.BOTTYPE}} -Seed {{.SEED}}
 
   web-build:
     desc: "Compila o frontend (Vite + React) para web/dist (embutido no binário)"

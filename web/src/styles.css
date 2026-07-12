@@ -1,24 +1,35 @@
 :root {
   --bg:#08080d; --panel:#13131c; --line:#262638; --txt:#e8ecf7; --dim:#8b93ad;
   --mat:#9aa3de; --mat2:#8a94d6; --matline:#7d87cc; --matink:#3a4180;
-  --accent:#f5b942; --blue:#5f8cff;
+  --accent:#f5b942; --blue:#5f8cff; --ok:#57c26b; --bad:#ff7b6b;
   /* Carta escala com a altura da tela: legível em monitor grande, cabe em laptop.
-     Divisor orça 2 tapetes (banco+ativo) + barra de ações + mão sem estourar 100vh. */
-  --cw:clamp(72px, calc((100vh - 190px) / 7.9), 140px);
+     Divisor orça 2 tapetes (banco+ativo) + barra de ações + mão sem estourar 100vh.
+     350 = cromo fixo real: paddings/gaps externos + labels, HP e barra de ações
+     + folga da mão (que cresce com --cw*1.25). */
+  --cw:clamp(64px, calc((100vh - 350px) / 8), 132px);
 }
 * { box-sizing:border-box; }
 html, body, #root { height:100%; }
-body { margin:0; background:var(--bg); color:var(--txt); font:13px/1.4 system-ui,sans-serif; overflow:hidden; }
-#app { display:grid; grid-template-columns:150px 1fr 96px; gap:10px; padding:10px; height:100vh; }
+body {
+  margin:0; color:var(--txt); font:13px/1.4 system-ui,sans-serif; overflow:hidden;
+  background:radial-gradient(1100px 700px at 50% 38%, #12121e, var(--bg) 75%);
+}
+/* padding externo maior = tabuleiro ~8% menor, respiro para animações (plano §1) */
+#app { display:grid; grid-template-columns:150px 1fr 96px; gap:14px; padding:22px 26px; height:100vh; }
 
 /* ---- sidebar esquerda: jogadores + prêmios ---- */
 #left { display:flex; flex-direction:column; gap:10px; overflow-y:auto; }
-.pp { background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:10px; text-align:center; }
+.pp { background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:10px; text-align:center; transition:border-color .2s, box-shadow .2s; }
 .pp .who { font-weight:700; font-size:13px; letter-spacing:.5px; }
 .pp.bot .who { color:var(--blue); }
 .pp.you .who { color:var(--accent); }
-.avatar { width:44px; height:44px; border-radius:50%; background:#232335; border:2px solid var(--line); margin:8px auto 4px; display:flex; align-items:center; justify-content:center; font-size:22px; }
-.pp .sub { color:var(--dim); font-size:11px; }
+.pp .sub { color:var(--dim); font-size:11px; margin-top:4px; }
+/* indicador de vez: painel do lado ativo acende */
+.pp.turn.you { border-color:var(--accent); box-shadow:0 0 12px rgba(245,185,66,.25); }
+.pp.turn.bot { border-color:var(--blue); box-shadow:0 0 12px rgba(95,140,255,.25); }
+.avatar { width:34px; height:34px; border-radius:50%; margin:0 auto 6px; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:14px; border:2px solid var(--line); }
+.pp.bot .avatar { color:var(--blue); background:rgba(95,140,255,.12); border-color:rgba(95,140,255,.4); }
+.pp.you .avatar { color:var(--accent); background:rgba(245,185,66,.12); border-color:rgba(245,185,66,.4); }
 .prizes { background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:8px; text-align:center; }
 .prizes h4 { margin:0 0 6px; font-size:10px; letter-spacing:1px; color:var(--dim); }
 .prizes .col { display:flex; flex-direction:column; gap:4px; align-items:center; }
@@ -29,26 +40,36 @@ body { margin:0; background:var(--bg); color:var(--txt); font:13px/1.4 system-ui
 
 /* ---- tabuleiro central ---- */
 #center { display:flex; flex-direction:column; gap:8px; min-width:0; min-height:0; }
-.mat { position:relative; flex:1; min-height:0; background:linear-gradient(160deg, var(--mat), var(--mat2)); border-radius:18px; padding:10px 14px; display:grid; gap:12px; overflow:hidden; color:var(--matink); }
+.mat { position:relative; flex:1; min-height:0; background:linear-gradient(160deg, var(--mat), var(--mat2)); border-radius:18px; padding:10px 16px; display:grid; gap:14px; overflow:hidden; color:var(--matink); }
 .mat.bot { grid-template-columns:96px 1fr 118px; }
 .mat.you { grid-template-columns:1fr 96px; }
-.mat::before { /* marca-d'água de Pokébola */
-  content:''; position:absolute; width:46%; aspect-ratio:1; left:50%; top:50%; transform:translate(-50%,-50%);
-  border-radius:50%; border:26px solid rgba(255,255,255,.14);
-  background:linear-gradient(transparent 44%, rgba(255,255,255,.14) 44%, rgba(255,255,255,.14) 56%, transparent 56%);
+.mat::before { /* marca-d'água de Pokébola, integrada ao tapete */
+  content:''; position:absolute; width:52%; aspect-ratio:1; left:50%; top:50%; transform:translate(-50%,-50%);
+  border-radius:50%; border:26px solid rgba(255,255,255,.10);
+  background:linear-gradient(transparent 45%, rgba(255,255,255,.10) 45%, rgba(255,255,255,.10) 55%, transparent 55%);
   pointer-events:none;
 }
-.mat > * { position:relative; z-index:1; min-width:0; }
+.mat::after { /* textura discreta de tecido no tapete (plano §5) */
+  content:''; position:absolute; inset:0; pointer-events:none;
+  background:repeating-linear-gradient(45deg, rgba(255,255,255,.03) 0 2px, transparent 2px 6px);
+}
+.mat > * { position:relative; z-index:1; min-width:0; min-height:0; overflow:hidden; }
 .mlabel { font-size:10px; font-weight:700; letter-spacing:1px; text-transform:uppercase; color:var(--matink); opacity:.85; text-align:center; margin-bottom:4px; }
 .pilescol { display:flex; flex-direction:column; justify-content:space-around; align-items:center; }
 .fieldcol { display:flex; flex-direction:column; justify-content:space-evenly; min-width:0; }
 .apoiocol { display:flex; flex-direction:column; align-items:center; justify-content:center; }
-.apoio { width:100%; flex:0 1 82%; border:1px solid var(--matline); border-radius:12px; background:rgba(255,255,255,.10); padding:6px; display:flex; flex-direction:column; align-items:center; gap:4px; }
+/* Estádio: zona compartilhada com formato próprio (chanfro) para destacar */
+.apoio { width:100%; flex:0 1 82%; border:2px solid rgba(255,255,255,.4); border-radius:4px 18px 4px 18px; background:rgba(255,255,255,.14); padding:6px; display:flex; flex-direction:column; align-items:center; gap:4px; }
 
-.benchrow { display:flex; gap:8px; justify-content:center; }
-.slot { width:var(--cw); aspect-ratio:63/88; border:2px dashed var(--matline); border-radius:8px; background:rgba(255,255,255,.08); flex:none; }
+.benchrow { display:flex; gap:14px; justify-content:center; }
+/* "base" sob cada slot de Pokémon: área clicável/soltável maior (plano §17) */
+.base { border-radius:10px; padding:6px; background:rgba(255,255,255,.06); }
+.base.over { outline:2px solid var(--ok); background:rgba(87,194,107,.18); border-radius:10px; }
+.slot { width:var(--cw); aspect-ratio:63/88; border:2px dashed var(--matline); border-radius:8px; background:rgba(255,255,255,.08); flex:none;
+        display:flex; align-items:center; justify-content:center; font-size:9px; font-weight:700; color:var(--matink); opacity:.8; text-align:center; padding:4px; }
 .activewrap { display:flex; justify-content:center; }
-.active .cardbox .card, .active .slot { width:calc(var(--cw) * 1.18); }
+.active .cardbox .card, .active .slot { width:calc(var(--cw) * 1.22); }
+.active .base { box-shadow:0 0 0 1px rgba(255,255,255,.3), 0 0 18px rgba(255,255,255,.2); }
 
 .cardbox { position:relative; display:inline-block; cursor:default; flex:none; }
 /* Cartas do bot ficam viradas para ele (realismo de mesa); o preview no hover
@@ -64,38 +85,66 @@ body { margin:0; background:var(--bg); color:var(--txt); font:13px/1.4 system-ui
 }
 .edot { animation:edotin .45s ease-out; }
 .cardbox.click { cursor:pointer; }
+/* feedback: azul no hover de carta clicável, dourado na seleção */
+.cardbox.click:hover .card { box-shadow:0 0 0 2px var(--blue), 0 0 10px rgba(95,140,255,.5); }
 .cardbox.sel { outline:3px solid var(--accent); border-radius:8px; box-shadow:0 0 14px rgba(245,185,66,.6); }
 .card { width:var(--cw); border-radius:6px; display:block; box-shadow:0 2px 6px rgba(0,0,0,.35); }
 .card.txt { aspect-ratio:63/88; background:#e9ecf8; color:#333; font-size:10px; padding:4px; overflow:hidden; }
 .dmg { position:absolute; top:2px; right:2px; background:#c0392b; color:#fff; border-radius:9px; padding:1px 6px; font-size:11px; font-weight:700; }
-.cond { position:absolute; bottom:2px; left:2px; right:2px; font-size:9px; background:rgba(0,0,0,.72); color:#fff; border-radius:4px; padding:1px 2px; text-align:center; }
+.cond { position:absolute; bottom:2px; left:2px; right:2px; text-align:center; }
+.cbadge { display:inline-block; font-size:8px; font-weight:800; letter-spacing:.5px; padding:1px 3px; border-radius:3px; color:#fff; margin:0 1px; box-shadow:0 1px 2px rgba(0,0,0,.4); }
 .sub { font-size:10px; text-align:center; color:var(--matink); margin-top:2px; font-weight:600; }
+/* HP visível sem abrir a carta */
+.hp { width:var(--cw); margin:2px auto 0; }
+.active .hp { width:calc(var(--cw) * 1.22); }
+.hpbar { height:4px; border-radius:2px; background:rgba(0,0,0,.3); overflow:hidden; }
+.hpbar i { display:block; height:100%; background:var(--ok); border-radius:2px; transition:width .25s ease-out; }
+.hpbar i.mid { background:#e3b62c; }
+.hpbar i.low { background:#d6543f; }
+.hptxt { font-size:9px; font-weight:700; text-align:center; color:var(--matink); }
 
 .pile { position:relative; width:calc(var(--cw) * .92); aspect-ratio:63/88; border-radius:7px; background:#3b4668; border:2px solid #2a3352;
         box-shadow:3px 3px 0 #2e3854, 6px 6px 0 #242c45; display:flex; align-items:center; justify-content:center; }
 .pile.empty { background:rgba(255,255,255,.08); border:2px dashed var(--matline); box-shadow:none; }
 .pile .ball { width:34px; height:34px; border-radius:50%; border:3px solid #202844;
               background:linear-gradient(#6273ac 44%, #202844 44%, #202844 56%, #46517f 56%); }
-.cnt { position:absolute; bottom:3px; right:5px; background:rgba(0,0,0,.65); color:#fff; border-radius:8px; padding:0 6px; font-size:11px; font-weight:700; }
+.cnt { position:absolute; bottom:3px; right:4px; background:rgba(0,0,0,.75); color:#fff; border:1px solid rgba(255,255,255,.25); border-radius:9px; padding:0 7px; font-size:12px; font-weight:700; }
 .discard-top .card { width:calc(var(--cw) * .92); }
 
 /* ---- barra de ações + mão ---- */
 #actionbar { background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:6px 10px; display:flex; align-items:center; gap:8px; flex-wrap:wrap; min-height:44px; }
-#status { font-weight:600; font-size:12px; }
-#status .err { color:#ff7b6b; font-weight:400; margin-left:8px; }
+#status { font-weight:600; font-size:12px; display:flex; align-items:center; gap:8px; }
+.vez { padding:2px 9px; border-radius:10px; font-weight:800; font-size:11px; letter-spacing:.5px; }
+.vez.you { background:var(--accent); color:#1a1a1a; }
+.vez.bot { background:#2b3352; color:var(--blue); }
+@keyframes errflash { 0% { background:rgba(255,123,107,.25); } 100% { background:transparent; } }
+#status .err { color:var(--bad); font-weight:400; border-radius:6px; padding:1px 5px; animation:errflash .5s ease-out; }
+/* glow vermelho na barra quando a ação é inválida (plano §14) */
+@keyframes errglow { 0% { border-color:var(--bad); box-shadow:0 0 12px rgba(255,123,107,.5); } }
+#actionbar.err { animation:errglow .6s ease-out; }
+.timer { color:var(--dim); font-variant-numeric:tabular-nums; }
 #actions { display:flex; gap:6px; flex-wrap:wrap; align-items:center; }
 button { background:#222236; color:var(--txt); border:1px solid var(--line); border-radius:8px; padding:6px 12px; cursor:pointer; font-size:12px; font-family:inherit; }
 button:hover { border-color:var(--accent); }
+button:focus-visible, .tool:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
 button.primary { background:var(--accent); color:#1a1a1a; font-weight:700; border-color:var(--accent); }
-#handtray { background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:8px; display:flex; gap:8px; overflow-x:auto; min-height:132px; align-items:center; flex:none; }
-#handtray .card { width:clamp(92px, calc(var(--cw) * 1.25), 160px); transition:transform .1s; }
-#handtray .cardbox:hover .card { transform:translateY(-6px); }
+#handtray { background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:16px 12px 6px; display:flex; gap:6px; overflow-x:auto; min-height:136px; align-items:center; justify-content:safe center; flex:none; }
+/* mão em leque: rotação/offset por carta via style inline no HandTray */
+.fan { flex:none; }
+/* carta comprada desliza para a mão (plano §15) */
+@keyframes drawin { from { transform:translateY(24px); opacity:0; } }
+.fan .cardbox { animation:drawin .25s ease-out; }
+/* contador de dano pulsa quando muda (key pelo valor remonta o nó) */
+@keyframes dmgpop { 0% { transform:scale(1.8); } }
+.dmg { animation:dmgpop .3s ease-out; }
+#handtray .card { width:clamp(92px, calc(var(--cw) * 1.25), 152px); transition:transform .15s ease-out; }
+#handtray .cardbox:hover { z-index:2; position:relative; }
+#handtray .cardbox:hover .card { transform:translateY(-10px) scale(1.07); box-shadow:0 8px 20px rgba(0,0,0,.5); }
 #handtray .empty-hand { color:var(--dim); padding:0 10px; }
 
 /* ---- coluna direita ---- */
 #right { display:flex; flex-direction:column; gap:10px; }
-.tool { background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:10px 4px; text-align:center; cursor:pointer; color:var(--dim); font-size:10px; font-weight:700; letter-spacing:.5px; }
-.tool .ico { font-size:20px; display:block; margin-bottom:4px; }
+.tool { background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:14px 4px; text-align:center; cursor:pointer; color:var(--dim); font-size:10px; font-weight:700; letter-spacing:.5px; }
 .tool:hover, .tool.on { border-color:var(--accent); color:var(--txt); }
 #endturn { background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:14px 4px; color:var(--txt); font-weight:700; font-size:11px; letter-spacing:.5px; }
 #endturn:hover { border-color:var(--accent); background:#2a2a1d; }
@@ -112,11 +161,31 @@ button.primary { background:var(--accent); color:#1a1a1a; font-weight:700; borde
 .cfg-info { font-size:12px; color:var(--dim); }
 
 #winner { position:fixed; inset:0; background:rgba(5,5,10,.85); display:flex; align-items:center; justify-content:center; z-index:20; }
-#winner div { font-size:30px; color:var(--accent); font-weight:800; }
+.winner-box { display:flex; flex-direction:column; align-items:center; gap:20px; }
+.winner-txt { font-size:30px; color:var(--accent); font-weight:800; }
+
+#lobby { display:flex; align-items:center; justify-content:center; height:100vh; }
+.lobby-box { background:var(--panel); border:1px solid var(--line); border-radius:18px; padding:32px 40px; display:flex; flex-direction:column; gap:14px; min-width:300px; }
+.lobby-title { font-size:18px; font-weight:800; color:var(--txt); margin-bottom:6px; }
+.lobby-row { display:flex; flex-direction:column; gap:4px; }
+.lobby-row label { font-size:10px; color:var(--dim); font-weight:700; letter-spacing:.5px; text-transform:uppercase; }
+.lobby-row select, .lobby-row input[type=number] { background:var(--bg); color:var(--txt); border:1px solid var(--line); border-radius:8px; padding:6px 10px; font-family:inherit; font-size:13px; }
+.lobby-err { color:var(--bad); font-size:12px; }
 
 /* bolinhas de energia ligada, coloridas por elemento */
 .edot { display:inline-block; width:13px; height:13px; border-radius:50%; border:2px solid rgba(255,255,255,.75); box-shadow:0 1px 2px rgba(0,0,0,.35); margin:0 1px; vertical-align:middle; }
+/* chip de Ferramenta ligada ("F"); nome completo no title */
+.tooldot { display:inline-block; min-width:13px; height:13px; border-radius:3px; background:var(--matink); color:#fff; font-size:9px; font-weight:700; line-height:13px; text-align:center; margin:0 1px; vertical-align:middle; }
+
+@media (prefers-reduced-motion: reduce) {
+  .fieldcol .cardbox, .edot, #status .err, .fan .cardbox, .dmg, #actionbar.err { animation:none; }
+  #handtray .card, .hpbar i, .pp, #preview { transition:none; }
+}
 
 /* ---- painel de preview no hover ---- */
-#preview { position:fixed; left:160px; top:50%; transform:translateY(-50%); width:min(340px, 26vw); z-index:15; pointer-events:none; filter:drop-shadow(0 8px 30px rgba(0,0,0,.7)); }
+/* left/top calculados em CardPreview a partir do rect da carta sob o mouse
+   (nunca sobrepõe a origem); entrada/saída com fade+scale. */
+#preview { position:fixed; z-index:15; pointer-events:none; filter:drop-shadow(0 8px 30px rgba(0,0,0,.7));
+           opacity:0; transform:scale(.92); transition:opacity .18s ease-out, transform .18s ease-out; }
+#preview.show { opacity:1; transform:scale(1); }
 #preview img { width:100%; border-radius:14px; display:block; }

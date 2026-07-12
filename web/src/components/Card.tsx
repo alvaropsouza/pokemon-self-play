@@ -1,7 +1,13 @@
-import { useContext } from 'react'
+import { useContext, useState } from 'react'
 import type { CardView, PokemonView } from '../api'
 import { energyColor, energyImage } from '../energy'
 import { PreviewCtx } from '../preview'
+
+// Sigla + cor por condição especial (sem emoji — PRODUCT.md).
+const COND: Record<string, [string, string]> = {
+  poisoned: ['PSN', '#7c4a8c'], burned: ['BRN', '#c04a36'], asleep: ['SLP', '#4a6a8c'],
+  confused: ['CNF', '#b0507e'], paralyzed: ['PAR', '#a8862a'],
+}
 
 // Carta genérica: imagem quando existe; energia básica sem imagem usa o scan
 // do pokemontcg.io; demais sem imagem, fallback textual. Overlays de dano e
@@ -22,25 +28,49 @@ export function Card({ view, selected, onClick, dragData }: {
     <div className={cls} onClick={onClick}
       draggable={dragData !== undefined}
       onDragStart={dragData !== undefined
-        ? e => e.dataTransfer.setData('text/plain', dragData)
+        ? e => { e.dataTransfer.setData('text/plain', dragData); setPreview(null) }
         : undefined}
-      onMouseEnter={() => setPreview(c)} onMouseLeave={() => setPreview(null)}>
+      onMouseEnter={e => setPreview(c, e.currentTarget.getBoundingClientRect())}
+      onMouseLeave={() => setPreview(null)}>
       {img
         ? <img className="card" src={img} title={c.name} alt={c.name} />
         : <div className="card txt">{c.name}</div>}
-      {pk && pk.damage > 0 && <span className="dmg">{pk.damage}</span>}
-      {pk && pk.conditions.length > 0 && <span className="cond">{pk.conditions.join(',')}</span>}
+      {/* key pelo valor: mudar o dano remonta o nó → pulso de dmgpop */}
+      {pk && pk.damage > 0 && <span key={pk.damage} className="dmg">{pk.damage}</span>}
+      {pk && pk.conditions.length > 0 && (
+        <span className="cond">
+          {pk.conditions.map(cd => {
+            const [tag, bg] = COND[cd] ?? [cd.slice(0, 3).toUpperCase(), '#555']
+            return <span key={cd} className="cbadge" style={{ background: bg }} title={cd}>{tag}</span>
+          })}
+        </span>
+      )}
     </div>
   )
 }
 
-export function EmptySlot() {
-  return <div className="slot" />
+export function EmptySlot({ label }: { label?: string }) {
+  return <div className="slot">{label}</div>
+}
+
+// HP restante visível sem abrir a carta: barra + texto.
+function HpGauge({ view }: { view: PokemonView }) {
+  const hp = view.card.hp
+  if (hp <= 0) return null
+  const rem = Math.max(0, hp - view.damage)
+  const pct = rem / hp
+  const cls = pct <= 0.25 ? 'low' : pct <= 0.5 ? 'mid' : ''
+  return (
+    <div className="hp">
+      <div className="hpbar"><i className={cls} style={{ width: `${pct * 100}%` }} /></div>
+      <div className="hptxt">{rem}/{hp} PS</div>
+    </div>
+  )
 }
 
 // Slot de Pokémon em jogo (ativo/banco); vazio vira slot tracejado.
 // Energias ligadas aparecem como bolinhas coloridas por elemento.
-export function PokemonSlot({ view, selected, onClick, onDropCard, dragData }: {
+export function PokemonSlot({ view, selected, onClick, onDropCard, dragData, placeholder }: {
   view: PokemonView | null | undefined
   selected?: boolean
   onClick?: () => void
@@ -48,28 +78,36 @@ export function PokemonSlot({ view, selected, onClick, onDropCard, dragData }: {
   onDropCard?: (data: string) => void
   // Torna o Pokémon deste slot arrastável (ex.: promover do banco).
   dragData?: string
+  // Texto do slot vazio ("+ Pokémon" no lado do jogador).
+  placeholder?: string
 }) {
   const droppable = onDropCard !== undefined
+  // Realce verde do alvo durante drag-over (feedback de ação válida).
+  const [over, setOver] = useState(false)
   const dropProps = droppable ? {
-    onDragOver: (e: React.DragEvent) => e.preventDefault(),
+    onDragOver: (e: React.DragEvent) => { e.preventDefault(); setOver(true) },
+    onDragLeave: () => setOver(false),
     onDrop: (e: React.DragEvent) => {
       e.preventDefault()
+      setOver(false)
       onDropCard(e.dataTransfer.getData('text/plain'))
     },
   } : {}
-  if (!view) return <div {...dropProps}><EmptySlot /></div>
+  const cls = 'base' + (over ? ' over' : '')
+  if (!view) return <div className={cls} {...dropProps}><EmptySlot label={droppable ? placeholder : undefined} /></div>
   const energies = view.energies ?? []
   return (
-    <div {...dropProps}>
+    <div className={cls} {...dropProps}>
       {/* key pelo id: evoluir troca a carta e remonta o nó → animação de entrada */}
       <Card key={view.card.id} view={view} selected={selected} onClick={onClick} dragData={dragData} />
+      <HpGauge view={view} />
       {(energies.length > 0 || view.tool) && (
         <div className="sub">
           {energies.map((e, i) => (
             <span key={i} className="edot" title={e.name}
               style={{ background: energyColor(e.nameEN) }} />
           ))}
-          {view.tool && <span title={view.tool.name}> 🔧</span>}
+          {view.tool && <span className="tooldot" title={view.tool.name}>F</span>}
         </div>
       )}
     </div>

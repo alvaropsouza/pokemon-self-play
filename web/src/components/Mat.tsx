@@ -22,6 +22,7 @@ function Bench({ side, isYou, sel, onSelect, onDropHand, dragBench }: {
               onClick={isYou && b ? () => onSelect('bench', i) : undefined}
               onDropCard={onDropHand ? data => onDropHand(i, data) : undefined}
               dragData={dragBench && b ? `bench:${i}` : undefined}
+              placeholder="+ Pokémon"
               selected={isYou && sel?.kind === 'bench' && sel.idx === i} />
           )
         })}

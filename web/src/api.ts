@@ -51,6 +51,12 @@ export interface GameState {
   error?: string
 }
 
+export interface GameConfig {
+  mytype: string
+  bottype: string
+  seed: number
+}
+
 export async function fetchState(): Promise<GameState> {
   const r = await fetch('/api/state')
   return r.json()
@@ -61,6 +67,15 @@ export async function postAction(body: Record<string, unknown>): Promise<GameSta
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
+  })
+  return r.json()
+}
+
+export async function postNew(config: GameConfig): Promise<GameState> {
+  const r = await fetch('/api/new', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(config),
   })
   return r.json()
 }
