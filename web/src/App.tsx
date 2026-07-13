@@ -24,7 +24,7 @@ function HandTray({ s, sel, onSelect }: {
           ? { transform: `rotate(${off * 2}deg) translateY(${Math.abs(off) * 3}px)` }
           : undefined
         return (
-          <div key={c.id} className="fan" style={fan}>
+          <div key={`${c.id}-${i}`} className="fan" style={fan}>
             <Card view={c} onClick={() => onSelect(i)}
               dragData={c.category === 'Energy' ? `energy:${i}`
                 : c.category === 'Pokemon'
@@ -90,6 +90,40 @@ function LobbyScreen({ onStart, err }: { onStart: (c: GameConfig) => void; err: 
   )
 }
 
+// Modal de busca no deck: escolhe até `max` candidatos (0 = falhar a busca).
+function ChoiceOverlay({ pc, post }: {
+  pc: NonNullable<GameState['pendingChoice']>
+  post: (body: Record<string, unknown>) => void
+}) {
+  const [picks, setPicks] = useState<number[]>([])
+  const toggle = (i: number) => setPicks(cur =>
+    cur.includes(i) ? cur.filter(x => x !== i)
+      : cur.length < pc.max ? [...cur, i] : cur)
+  const destTxt = pc.dest === 'bench' ? 'para o Banco' : 'para a mão'
+  return (
+    <div id="winner">
+      <div className="winner-box choice-box">
+        <div className="choice-title">
+          Busca no deck: escolha até {pc.max} carta{pc.max > 1 ? 's' : ''} {destTxt}
+        </div>
+        <div className="choice-cards">
+          {pc.candidates.map((c, i) => (
+            <Card key={i} view={c} selected={picks.includes(i)} onClick={() => toggle(i)} />
+          ))}
+        </div>
+        <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
+          <button className="primary" onClick={() => post({ action: 'resolve_choice', picks })}>
+            Confirmar ({picks.length})
+          </button>
+          <button onClick={() => post({ action: 'resolve_choice', picks: [] })}>
+            Não pegar nada
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function WinnerOverlay({ winner, onReplay, onNew }: { winner: number; onReplay: () => void; onNew: () => void }) {
   if (winner < 0 && winner !== -2) return null
   const txt = winner === -2 ? 'Sudden Death!' : winner === 0 ? 'Você venceu!' : 'Bot venceu.'
@@ -117,7 +151,7 @@ export default function App() {
   const publishPreview = useCallback((c: CardView | null, rect?: DOMRect) =>
     setPreview(c && rect ? { card: c, rect } : null), [])
 
-  useEffect(() => { fetchState().then(setS) }, [])
+  useEffect(() => { fetchState().then(setS).catch(() => {}) }, [])
 
   const startGame = useCallback((c: GameConfig) => {
     setConfig(c)
@@ -131,7 +165,7 @@ export default function App() {
         setSel(null)
         setErr('')
       }
-    })
+    }).catch(e => setLobbyErr(String(e)))
   }, [])
 
   const post = useCallback((body: Record<string, unknown>) => {
@@ -139,7 +173,7 @@ export default function App() {
       setErr(j.error ?? '')
       setS(j)
       setSel(null)
-    })
+    }).catch(e => setErr(String(e)))
   }, [])
 
   const select = useCallback((kind: 'hand' | 'active' | 'bench', idx: number) => {
@@ -205,6 +239,7 @@ export default function App() {
         <RightRail pane={pane} setPane={setPane} endTurn={() => post({ action: 'end_turn' })} />
         <Drawer pane={pane} s={s} post={post} />
         <CardPreview p={preview} />
+        {s.pendingChoice && <ChoiceOverlay key={s.log?.length} pc={s.pendingChoice} post={post} />}
         <WinnerOverlay
           winner={s.winner}
           onReplay={() => startGame(config)}

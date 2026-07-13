@@ -136,6 +136,10 @@ type Game struct {
 	// Banco antes de qualquer outra ação.
 	NeedPromote [2]bool
 
+	// Pending é uma escolha de busca aguardando o jogador (nil = nenhuma).
+	// Bloqueia as demais ações até ResolveChoice.
+	Pending *PendingChoice
+
 	// Log é o histórico legível de eventos da partida.
 	Log []string
 }
@@ -343,6 +347,9 @@ func (g *Game) requireTurn(p int) error {
 	}
 	if g.NeedPromote[0] || g.NeedPromote[1] {
 		return fmt.Errorf("promoção pendente antes de continuar")
+	}
+	if g.Pending != nil {
+		return fmt.Errorf("escolha de busca pendente antes de continuar")
 	}
 	return nil
 }

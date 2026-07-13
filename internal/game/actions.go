@@ -117,7 +117,11 @@ func (g *Game) PlayItem(p, handIdx int) error {
 	}
 	g.removeFromHand(p, handIdx)
 	g.Players[p].Discard = append(g.Players[p].Discard, c.ID)
-	g.logf("jogador %d: joga Item %s (efeito: arbitragem manual)", p+1, c.Name.EN)
+	if !g.applyTrainerEffect(p, c) {
+		g.logf("jogador %d: joga Item %s → efeito manual: %s", p+1, c.Name.EN, c.Effect.EN)
+	} else {
+		g.logf("jogador %d: joga Item %s", p+1, c.Name.EN)
+	}
 	return nil
 }
 
@@ -144,7 +148,11 @@ func (g *Game) PlaySupporter(p, handIdx int) error {
 	g.removeFromHand(p, handIdx)
 	ps.Discard = append(ps.Discard, c.ID)
 	ps.SupporterPlayed = true
-	g.logf("jogador %d: joga Suporte %s (efeito: arbitragem manual)", p+1, c.Name.EN)
+	if !g.applyTrainerEffect(p, c) {
+		g.logf("jogador %d: joga Suporte %s → efeito manual: %s", p+1, c.Name.EN, c.Effect.EN)
+	} else {
+		g.logf("jogador %d: joga Suporte %s", p+1, c.Name.EN)
+	}
 	return nil
 }
 

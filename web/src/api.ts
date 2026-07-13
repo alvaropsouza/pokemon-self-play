@@ -38,6 +38,12 @@ export interface SideView {
   hand?: CardView[]
 }
 
+export interface PendingChoice {
+  max: number
+  dest: 'hand' | 'bench'
+  candidates: CardView[]
+}
+
 export interface GameState {
   phase: string
   turn: number
@@ -48,6 +54,7 @@ export interface GameState {
   you: SideView
   bot: SideView
   stadium?: CardView
+  pendingChoice?: PendingChoice
   error?: string
 }
 
@@ -62,9 +69,19 @@ export type Sel =
   | { kind: 'retreating'; benchIdx: number | null; energyIdxs: number[] }
   | null
 
+async function readJSON<T>(r: Response): Promise<T> {
+  const text = await r.text()
+  if (!text) throw new Error(`HTTP ${r.status}: resposta vazia`)
+  try {
+    return JSON.parse(text) as T
+  } catch {
+    throw new Error(`HTTP ${r.status}: resposta não-JSON — ${text.slice(0, 120)}`)
+  }
+}
+
 export async function fetchState(): Promise<GameState> {
   const r = await fetch('/api/state')
-  return r.json()
+  return readJSON<GameState>(r)
 }
 
 export async function postAction(body: Record<string, unknown>): Promise<GameState> {
@@ -73,7 +90,7 @@ export async function postAction(body: Record<string, unknown>): Promise<GameSta
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   })
-  return r.json()
+  return readJSON<GameState>(r)
 }
 
 export async function postNew(config: GameConfig): Promise<GameState> {
@@ -82,5 +99,5 @@ export async function postNew(config: GameConfig): Promise<GameState> {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(config),
   })
-  return r.json()
+  return readJSON<GameState>(r)
 }

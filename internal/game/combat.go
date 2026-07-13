@@ -50,14 +50,14 @@ func (g *Game) Attack(p, attackIdx int) error {
 	}
 
 	def := g.Players[1-p]
+	activeSnapshot := ps.Active // capture before any KO resolution
 	dmg := g.attackDamage(atkCard, atk, def.Active)
+	dmg += ExtraAttackDamage(g, p, atk, ps.Active)
 	g.logf("jogador %d: %s usa %s → %d de dano", p+1, atkCard.Name.EN, atk.Name.EN, dmg)
-	if atk.Effect.EN != "" {
-		g.logf("efeito de %s (arbitragem manual): %s", atk.Name.EN, atk.Effect.EN)
-	}
 	if def.Active != nil && dmg > 0 {
 		def.Active.Damage += dmg
 	}
+	g.applyAttackEffect(p, atk, activeSnapshot)
 	g.resolveKnockouts()
 	if g.Phase == PhaseTurn {
 		g.finishTurn()

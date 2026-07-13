@@ -3,6 +3,9 @@
 # Uso: `task` lista tudo; `task play`, `task test`, `task import -- me01`...
 version: "3"
 
+# Variáveis locais (ANTHROPIC_API_KEY...) — arquivo git-ignorado, opcional.
+dotenv: ['.env']
+
 tasks:
   default:
     desc: Lista as tarefas disponíveis
@@ -12,6 +15,7 @@ tasks:
 
   play:
     desc: "Partida contra o bot em http://localhost:8080 (config via tela de lobby)"
+    deps: [web-build]
     cmds:
       - go run ./cmd/play
 
@@ -27,6 +31,14 @@ tasks:
   web-build:
     desc: "Compila o frontend (Vite + React) para web/dist (embutido no binário)"
     dir: web
+    # Fingerprint: só recompila se as fontes mudaram desde o último build.
+    sources:
+      - src/**/*
+      - index.html
+      - package.json
+      - vite.config.*
+    generates:
+      - dist/**/*
     cmds:
       - npm install
       - npm run build
@@ -41,6 +53,11 @@ tasks:
     desc: "Importa sets do TCGdex (ex.: task import -- me01 sve)"
     cmds:
       - go run ./cmd/import {{.CLI_ARGS}}
+
+  compile-effects:
+    desc: "Atualiza data/effects.json: lista efeitos pendentes; com ANTHROPIC_API_KEY, compila via Claude"
+    cmds:
+      - go run ./cmd/compile-effects {{.CLI_ARGS}}
 
   build:
     desc: Compila tudo

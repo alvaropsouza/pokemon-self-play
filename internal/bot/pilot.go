@@ -41,9 +41,25 @@ func PromoteIfNeeded(g *game.Game, player int) {
 	_ = g.Promote(player, best)
 }
 
+// ResolvePending resolve busca pendente do bot: pega o máximo, na ordem dos
+// candidatos (heurística mínima).
+func ResolvePending(g *game.Game, player int) {
+	pc := g.Pending
+	if pc == nil || pc.Player != player {
+		return
+	}
+	n := min(pc.Max, len(pc.Candidates))
+	picks := make([]int, n)
+	for i := range picks {
+		picks[i] = i
+	}
+	_ = g.ResolveChoice(player, picks)
+}
+
 // TakeTurn executa o turno completo do bot (após a compra automática do motor).
 func TakeTurn(g *game.Game, player int) {
 	PromoteIfNeeded(g, player)
+	ResolvePending(g, player)
 	if g.Phase != game.PhaseTurn || g.Current != player {
 		return
 	}
@@ -64,6 +80,11 @@ func TakeTurn(g *game.Game, player int) {
 				break
 			}
 		}
+	}
+
+	// Suporte: joga se mão pequena e tem Suporte de compra.
+	if !ps.SupporterPlayed {
+		playDrawSupporter(g, player)
 	}
 
 	// Energia: no Ativo se o melhor ataque dele ainda não está pago; senão no banco.
@@ -129,4 +150,26 @@ func bestPaidAttack(g *game.Game, pk *game.PokemonInPlay) int {
 		}
 	}
 	return best
+}
+
+// playDrawSupporter plays a draw/refresh Supporter from hand when hand is small.
+func playDrawSupporter(g *game.Game, player int) {
+	ps := g.Players[player]
+	if len(ps.Hand) > 4 {
+		return
+	}
+	for i, id := range ps.Hand {
+		c := g.Card(id)
+		if c.Category != cards.CategoryTrainer || c.TrainerType != "Supporter" {
+			continue
+		}
+		ce := game.CompileEffect(c.Effect.EN)
+		for _, op := range ce.Ops {
+			switch op.Kind {
+			case game.OpDraw, game.OpDrawUntil, game.OpDrawBoth, game.OpDrawPerPrizeBoth:
+				_ = g.PlaySupporter(player, i)
+				return
+			}
+		}
+	}
 }

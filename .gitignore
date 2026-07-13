@@ -1,9 +1,14 @@
+# Segredos locais (ANTHROPIC_API_KEY...)
+.env
+
 # Binários Go
 *.exe
 /bin/
 
 # Base de cartas local (regenerável via `go run ./cmd/import <setID>`)
-/data/
+/data/*
+# Banco de efeitos é curado (LLM + revisão humana) — commitado
+!/data/effects.json
 
 .vscode/
 

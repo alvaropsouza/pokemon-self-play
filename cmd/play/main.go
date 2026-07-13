@@ -43,6 +43,9 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	if err := game.LoadEffectDB("data/effects.json"); err != nil {
+		log.Fatal(err)
+	}
 	s := &server{store: store}
 
 	dist, err := fs.Sub(web.Dist, "dist")
@@ -50,9 +53,9 @@ func main() {
 		log.Fatal(err)
 	}
 	http.Handle("/", http.FileServer(http.FS(dist)))
-	http.HandleFunc("/api/state", s.handleState)
-	http.HandleFunc("/api/action", s.handleAction)
-	http.HandleFunc("/api/new", s.handleNew)
+	http.HandleFunc("/api/state", safeHandler(s.handleState))
+	http.HandleFunc("/api/action", safeHandler(s.handleAction))
+	http.HandleFunc("/api/new", safeHandler(s.handleNew))
 
 	log.Printf("em http://%s", *addr)
 	log.Fatal(http.ListenAndServe(*addr, nil))
@@ -124,6 +127,12 @@ func (s *server) advance() {
 		if s.g.NeedPromote[human] {
 			return // aguarda o humano promover
 		}
+		if pc := s.g.Pending; pc != nil {
+			if pc.Player == human {
+				return // aguarda o humano escolher
+			}
+			bot.ResolvePending(s.g, botP)
+		}
 		if s.g.Current != botP {
 			return
 		}
@@ -142,6 +151,8 @@ type actionReq struct {
 	Player    int    `json:"player"`
 	Amount    int    `json:"amount"`
 	Condition string `json:"condition"`
+	// Picks: posições escolhidas na lista de candidatos da busca pendente.
+	Picks []int `json:"picks"`
 }
 
 func (s *server) handleAction(w http.ResponseWriter, r *http.Request) {
@@ -202,6 +213,9 @@ func (s *server) handleAction(w http.ResponseWriter, r *http.Request) {
 	case "promote":
 		log.Printf("[action] promote bench=%d", req.Bench)
 		err = g.Promote(human, req.Bench)
+	case "resolve_choice":
+		log.Printf("[action] resolve_choice picks=%v", req.Picks)
+		err = g.ResolveChoice(human, req.Picks)
 	case "end_turn":
 		log.Printf("[action] end_turn turno=%d", g.TurnNumber)
 		err = g.EndTurn(human)
@@ -249,7 +263,24 @@ func (s *server) handleState(w http.ResponseWriter, r *http.Request) {
 
 func writeJSON(w http.ResponseWriter, v any) {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	json.NewEncoder(w).Encode(v)
+	if err := json.NewEncoder(w).Encode(v); err != nil {
+		log.Printf("[writeJSON] encode error: %v", err)
+	}
+}
+
+// safeHandler envolve um handler com recover: panics viram respostas JSON de erro.
+func safeHandler(fn http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		defer func() {
+			if rec := recover(); rec != nil {
+				log.Printf("[panic] %s %s: %v", r.Method, r.URL.Path, rec)
+				w.Header().Set("Content-Type", "application/json; charset=utf-8")
+				w.WriteHeader(http.StatusInternalServerError)
+				json.NewEncoder(w).Encode(map[string]any{"error": fmt.Sprintf("panic: %v", rec)})
+			}
+		}()
+		fn(w, r)
+	}
 }
 
 // ---- visão do estado (esconde mão/deck/prêmios do bot) ----
@@ -353,6 +384,15 @@ func (s *server) stateJSON() map[string]any {
 	}
 	if g.Stadium != "" {
 		v["stadium"] = s.cardView(g.Stadium)
+	}
+	if pc := g.Pending; pc != nil && pc.Player == human {
+		var cand []map[string]any
+		for _, di := range pc.Candidates {
+			cand = append(cand, s.cardView(g.Players[human].Deck[di]))
+		}
+		v["pendingChoice"] = map[string]any{
+			"max": pc.Max, "dest": pc.Dest, "candidates": cand,
+		}
 	}
 	return v
 }
