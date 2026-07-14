@@ -30,8 +30,8 @@ function EnergyCost({ cost }: { cost: string[] | null }) {
 // Rótulos das fases para o jogador — oculta strings internas do motor.
 const PHASE_LABEL: Record<string, string> = {
   setup: 'Preparação',
-  'playing-first': '1º Turno',
-  playing: 'Em jogo',
+  turn: 'Em jogo',
+  finished: 'Encerrada',
 }
 
 type Post = (body: Record<string, unknown>) => void
@@ -152,15 +152,21 @@ export function ActionBar({ s, sel, setSel, err, post }: {
     }
 
     if (s.you.active) {
-      s.you.active.card.attacks?.forEach((a, i) => {
-        actions.push(
-          attack(
-            <><EnergyCost cost={a.cost} />{a.name} ({a.damage || 'efeito'})</>,
-            () => post({ action: 'attack', attack: i }),
-            `attack-${i}`,
+      // Turno 1: quem começa não pode atacar (regra CLAUDE.md §6).
+      const firstTurn = s.turn === 1 && myTurn
+      if (!firstTurn) {
+        s.you.active.card.attacks?.forEach((a, i) => {
+          actions.push(
+            attack(
+              <><EnergyCost cost={a.cost} />{a.name} ({a.damage || 'efeito'})</>,
+              () => post({ action: 'attack', attack: i }),
+              `attack-${i}`,
+            )
           )
-        )
-      })
+        })
+      } else {
+        actions.push(<span key="no-atk" style={{ color: 'var(--dim)', fontSize: 11 }}>Sem ataque no 1º turno</span>)
+      }
       if (s.you.bench?.length) {
         actions.push(util('Recuar', () => setSel({ kind: 'retreating', benchIdx: null, energyIdxs: [] })))
       }
@@ -168,14 +174,17 @@ export function ActionBar({ s, sel, setSel, err, post }: {
   }
 
   return (
-    <div id="actionbar">
-      <span id="status">
-        <span className={'vez ' + (myTurn ? 'you' : 'bot')}>{myTurn ? 'SUA VEZ' : 'VEZ DO BOT'}</span>
-        <span>Turno {s.turn} · {phaseTxt}</span>
-        <TurnTimer turn={s.turn} current={s.current} />
-      </span>
-      <span id="actions">{actions}</span>
+    <>
+      <div id="actionbar">
+        <span id="status">
+          <span className={'vez ' + (myTurn ? 'you' : 'bot')}>{myTurn ? 'SUA VEZ' : 'VEZ DO BOT'}</span>
+          <span>Turno {s.turn} · {phaseTxt}</span>
+          <TurnTimer turn={s.turn} current={s.current} />
+        </span>
+        <span className="bar-div" aria-hidden="true" />
+        <span id="actions">{actions}</span>
+      </div>
       {err && <div className="err-banner">{err}</div>}
-    </div>
+    </>
   )
 }

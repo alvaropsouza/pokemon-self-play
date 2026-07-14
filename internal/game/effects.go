@@ -328,6 +328,9 @@ func ExtraAttackDamage(g *Game, p int, atk cards.Attack, attacker *PokemonInPlay
 	ce := CompileEffect(atk.Effect.EN)
 	extra := 0
 	for _, op := range ce.Ops {
+		if op.Flip {
+			continue // flip-conditional scaling roda em runOps com moeda real
+		}
 		switch op.Kind {
 		case OpScalePerEnergySelf:
 			extra += op.N * len(attacker.Energies)
@@ -359,10 +362,10 @@ func (g *Game) applyAttackEffect(p int, atk cards.Attack, attacker *PokemonInPla
 		return
 	}
 	ce := CompileEffect(atk.Effect.EN)
-	// ponytail: busca em ataque exigiria escolha pendente ANTES do fim do
-	// turno (finishTurn) — fica manual até o motor suportar; Treinadores cobrem.
+	// ponytail: ops que criam escolha pendente em ataque ficam manual — a
+	// escolha precisaria ser resolvida ANTES de finishTurn; Treinadores cobrem.
 	for _, op := range ce.Ops {
-		if op.Kind == OpSearch {
+		if op.Kind == OpSearch || op.Kind == OpSwitchSelf || op.Kind == OpSwitchOpp {
 			ce = CompiledEffect{Manual: true}
 			break
 		}

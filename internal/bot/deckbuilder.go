@@ -18,7 +18,7 @@ const (
 	pokemonTarget = 16
 	// 14 (não os ~10 de deck competitivo): sem draw engines automatizados,
 	// 10 energias deixam ~26% das mãos iniciais sem energia nenhuma.
-	energyTarget = 14
+	energyTarget = 16
 )
 
 // BuildDeck monta um deck de 60 cartas do(s) tipo(s) dado(s) usando o pool da

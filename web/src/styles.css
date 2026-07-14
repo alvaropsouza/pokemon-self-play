@@ -1,6 +1,8 @@
 :root {
   --bg:#08080d; --panel:#13131c; --line:#262638; --txt:#e8ecf7; --dim:#8b93ad;
-  --mat:#9aa3de; --mat2:#8a94d6; --matline:#7d87cc; --matink:#3a4180;
+  /* Feltro de playmat: índigo profundo, mais claro que o bg para o tapete ler
+     como objeto sobre a mesa; matink virou tinta clara (texto sobre feltro). */
+  --mat:#27305c; --mat2:#1c2346; --matline:#4d5a9a; --matink:#b7c0ef;
   --accent:#f5b942; --blue:#5f8cff; --ok:#57c26b; --bad:#ff7b6b;
   /* Carta escala com a altura da tela: legível em monitor grande, cabe em laptop.
      Divisor orça 2 tapetes (banco+ativo) + barra de ações + mão sem estourar 100vh.
@@ -42,21 +44,33 @@ body {
 /* ---- tabuleiro central ---- */
 #center { display:flex; flex-direction:column; gap:8px; min-width:0; min-height:0; }
 .mat { position:relative; flex:1; min-height:0; background:linear-gradient(160deg, var(--mat), var(--mat2)); border-radius:18px; padding:10px 16px; display:grid; gap:14px; overflow:hidden; color:var(--matink); }
-.mat.bot { grid-template-columns:96px 1fr 118px; }
-.mat.you { grid-template-columns:1fr 96px; }
+/* min-content: colunas de pilhas/Estádio seguem --cw (96px fixos cortavam a
+   pilha de .92*--cw em telas altas, onde --cw chega a 150px) */
+.mat.bot { grid-template-columns:min-content 1fr min-content; }
+.mat.you { grid-template-columns:1fr min-content; }
+/* identidade por lado: brilho interno na borda voltada ao adversário */
+.mat.bot { box-shadow:inset 0 28px 44px -28px rgba(95,140,255,.45), inset 0 0 0 1px rgba(95,140,255,.18); }
+.mat.you { box-shadow:inset 0 -28px 44px -28px rgba(245,185,66,.38), inset 0 0 0 1px rgba(245,185,66,.16); }
 .mat::before { /* marca-d'água de Pokébola, integrada ao tapete */
-  content:''; position:absolute; width:52%; aspect-ratio:1; left:50%; top:50%; transform:translate(-50%,-50%);
-  border-radius:50%; border:26px solid rgba(255,255,255,.10);
-  background:linear-gradient(transparent 45%, rgba(255,255,255,.10) 45%, rgba(255,255,255,.10) 55%, transparent 55%);
+  content:''; position:absolute; width:56%; aspect-ratio:1; left:50%; top:50%; transform:translate(-50%,-50%);
+  border-radius:50%; border:26px solid rgba(255,255,255,.06);
+  background:linear-gradient(transparent 45%, rgba(255,255,255,.06) 45%, rgba(255,255,255,.06) 55%, transparent 55%);
   pointer-events:none;
+}
+.mat::after { /* costura na borda, como playmat real */
+  content:''; position:absolute; inset:7px; border:1.5px dashed rgba(255,255,255,.13);
+  border-radius:12px; pointer-events:none;
 }
 .mat > * { position:relative; z-index:1; min-width:0; min-height:0; overflow:hidden; }
 .mlabel { font-size:10px; font-weight:700; letter-spacing:1px; text-transform:uppercase; color:var(--matink); opacity:.85; text-align:center; margin-bottom:4px; }
 .pilescol { display:flex; flex-direction:column; justify-content:space-around; align-items:center; }
 .fieldcol { display:flex; flex-direction:column; justify-content:space-evenly; min-width:0; }
-.apoiocol { display:flex; flex-direction:column; align-items:center; justify-content:center; }
-/* Estádio: zona compartilhada com formato próprio (chanfro) para destacar */
-.apoio { width:100%; flex:0 1 82%; border:2px solid rgba(255,255,255,.4); border-radius:4px 18px 4px 18px; background:rgba(255,255,255,.14); padding:6px; display:flex; flex-direction:column; align-items:center; gap:4px; }
+/* bot: ativo fica na borda inferior do fieldcol; padding evita clip das bolinhas de energia */
+.mat.bot .fieldcol { padding-bottom:18px; }
+/* Estádio: zona compartilhada — ancorada na borda inferior do tapete do bot,
+   junto à costura entre os dois lados (= centro da mesa física) */
+.apoiocol { display:flex; flex-direction:column; align-items:center; justify-content:flex-end; padding-bottom:2px; }
+.apoio { width:100%; flex:0 0 auto; border:2px solid rgba(255,255,255,.28); border-radius:4px 18px 4px 18px; background:rgba(255,255,255,.07); padding:6px; display:flex; flex-direction:column; align-items:center; gap:4px; }
 
 .benchrow { display:flex; gap:10px; justify-content:center; }
 /* fit-content: caixa abraça a carta (label "Pokémon Ativo" é mais larga que a
@@ -66,11 +80,16 @@ body {
 /* slot destacado como alvo válido de pick inline */
 .base.picking { outline:2px solid var(--ok); background:rgba(87,194,107,.14); cursor:pointer; animation:pickpulse 1.5s ease-in-out infinite; }
 @keyframes pickpulse { 0%,100% { outline-color:var(--ok); } 50% { outline-color:#a3e4b2; } }
-.slot { width:var(--cw); aspect-ratio:63/88; border:2px dashed var(--matline); border-radius:8px; background:rgba(255,255,255,.08); flex:none;
-        display:flex; align-items:center; justify-content:center; font-size:9px; font-weight:700; color:var(--matink); opacity:.8; text-align:center; padding:4px; }
+.slot { width:var(--cw); aspect-ratio:63/88; border:2px dashed var(--matline); border-radius:8px; background:rgba(255,255,255,.04); flex:none;
+        display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:700; color:var(--matink); opacity:.8; text-align:center; padding:4px; }
 .activewrap { display:flex; justify-content:center; }
 .active .cardbox .card, .active .slot { width:calc(var(--cw) * 1.22); }
-.active .base { box-shadow:0 0 0 1px rgba(255,255,255,.3), 0 0 18px rgba(255,255,255,.2); }
+/* spotlight do Ativo: brilho maior + halo radial no feltro escuro */
+.active .base { box-shadow:0 0 0 1px rgba(255,255,255,.28), 0 0 32px 6px rgba(180,195,255,.22); background:rgba(255,255,255,.07); }
+/* bot: ativo fica embaixo do banco — glow grande vazaria para cima */
+.mat.bot .active .base { box-shadow:0 0 0 1px rgba(255,255,255,.18); background:rgba(255,255,255,.07); }
+/* bot: slots vazios não têm fundo de carta — são informativos, não droppable */
+.mat.bot .base:has(.slot) { background:transparent; box-shadow:none; }
 
 .cardbox { position:relative; display:inline-block; cursor:default; flex:none; }
 /* Cartas do bot ficam viradas para ele (realismo de mesa); o preview no hover
@@ -87,24 +106,25 @@ body {
 .edot { animation:edotin .45s ease-out; }
 .cardbox.click { cursor:pointer; }
 /* feedback: azul no hover de carta clicável, dourado na seleção */
-.cardbox.click:hover .card { box-shadow:0 0 0 2px var(--blue), 0 0 10px rgba(95,140,255,.5); }
+.cardbox.click:hover .card, .cardbox.click:focus-visible .card { box-shadow:0 0 0 2px var(--blue), 0 0 10px rgba(95,140,255,.5); }
+.cardbox.click:focus-visible { outline:none; }
 .cardbox.sel { outline:3px solid var(--accent); border-radius:8px; box-shadow:0 0 14px rgba(245,185,66,.6); }
-.card { width:var(--cw); border-radius:6px; display:block; box-shadow:0 2px 6px rgba(0,0,0,.35); }
+.card { width:var(--cw); border-radius:6px; display:block; box-shadow:0 3px 8px rgba(0,0,0,.55); }
 .card.txt { aspect-ratio:63/88; background:#e9ecf8; color:#333; font-size:10px; padding:4px; overflow:hidden; }
 .dmg { position:absolute; top:2px; right:2px; background:#c0392b; color:#fff; border-radius:9px; padding:1px 6px; font-size:11px; font-weight:700; }
 .cond { position:absolute; bottom:2px; left:2px; right:2px; text-align:center; }
-.cbadge { display:inline-block; font-size:8px; font-weight:800; letter-spacing:.5px; padding:1px 3px; border-radius:3px; color:#fff; margin:0 1px; box-shadow:0 1px 2px rgba(0,0,0,.4); }
+.cbadge { display:inline-block; font-size:10px; font-weight:800; letter-spacing:.5px; padding:1px 3px; border-radius:3px; color:#fff; margin:0 1px; box-shadow:0 1px 2px rgba(0,0,0,.4); }
 .sub { font-size:10px; text-align:center; color:var(--matink); margin-top:2px; font-weight:600; }
 /* HP visível sem abrir a carta */
 .hp { width:var(--cw); margin:2px auto 0; }
 .active .hp { width:calc(var(--cw) * 1.22); }
-.hpbar { height:4px; border-radius:2px; background:rgba(0,0,0,.3); overflow:hidden; }
+.hpbar { height:4px; border-radius:2px; background:rgba(0,0,0,.45); overflow:hidden; }
 .hpbar i { display:block; height:100%; background:var(--ok); border-radius:2px; transition:width .25s ease-out; }
 .hpbar i.mid { background:#e3b62c; }
 .hpbar i.low { background:#d6543f; }
-.hptxt { font-size:9px; font-weight:700; text-align:center; color:var(--matink); }
+.hptxt { font-size:10px; font-weight:700; text-align:center; color:var(--matink); }
 
-.pile { position:relative; width:calc(var(--cw) * .92); aspect-ratio:63/88; border-radius:7px; background:#3b4668; border:2px solid #2a3352;
+.pile { position:relative; width:calc(var(--cw) * .92); aspect-ratio:63/88; border-radius:7px; background:#3b4668; border:2px solid #566198;
         box-shadow:3px 3px 0 #2e3854, 6px 6px 0 #242c45; display:flex; align-items:center; justify-content:center; }
 .pile.empty { background:rgba(255,255,255,.08); border:2px dashed var(--matline); box-shadow:none; }
 .pile .ball { width:34px; height:34px; border-radius:50%; border:3px solid #202844;
@@ -112,14 +132,17 @@ body {
 .cnt { position:absolute; bottom:3px; right:4px; background:rgba(0,0,0,.75); color:#fff; border:1px solid rgba(255,255,255,.25); border-radius:9px; padding:0 7px; font-size:12px; font-weight:700; }
 .discard-top .card { width:calc(var(--cw) * .92); }
 
-/* ---- barra de ações + mão ---- */
-#actionbar { background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:6px 10px; display:flex; align-items:center; gap:8px; flex-wrap:wrap; min-height:44px; }
-#status { font-weight:600; font-size:12px; display:flex; align-items:center; gap:8px; }
+/* ---- zona inferior: barra de ações fundida com a mão ---- */
+/* ActionBar é cabeçalho da mão; juntos formam um painel único sem gap entre eles */
+#hand-zone { flex:none; display:flex; flex-direction:column; }
+#actionbar { background:var(--panel); border:1px solid var(--line); border-bottom:none; border-radius:12px 12px 0 0; padding:6px 10px; display:flex; align-items:center; gap:8px; }
+#status { font-weight:600; font-size:12px; display:flex; align-items:center; gap:8px; flex:none; }
+.bar-div { width:1px; height:16px; background:var(--line); flex:none; margin:0 2px; }
 .vez { padding:2px 9px; border-radius:10px; font-weight:800; font-size:11px; letter-spacing:.5px; }
 .vez.you { background:var(--accent); color:#1a1a1a; }
 .vez.bot { background:#2b3352; color:var(--blue); }
-/* erro persistente até próxima ação — banner dedicado abaixo das ações */
-.err-banner { width:100%; padding:5px 10px; background:rgba(255,123,107,.12); border:1px solid rgba(255,123,107,.4); border-radius:8px; color:var(--bad); font-size:12px; margin-top:4px; }
+/* erro: aparece entre barra e mão (sem ocupar espaço dos tapetes) */
+.err-banner { padding:4px 10px; background:rgba(255,123,107,.12); border:1px solid rgba(255,123,107,.4); border-top:none; border-bottom:none; color:var(--bad); font-size:12px; }
 /* instrução de pick inline */
 .pick-hint { color:var(--ok); font-size:12px; font-weight:600; display:flex; align-items:center; gap:6px; }
 /* retreat prompt: energias toggleáveis */
@@ -131,12 +154,13 @@ body {
 .btn-cost { display:inline-flex; gap:2px; margin-right:5px; vertical-align:middle; }
 .btn-cost .edot { width:10px; height:10px; border-width:1.5px; animation:none; }
 .timer { color:var(--dim); font-variant-numeric:tabular-nums; }
-#actions { display:flex; gap:6px; flex-wrap:wrap; align-items:center; }
+#actions { display:flex; gap:6px; align-items:center; flex:1; overflow-x:auto; scrollbar-width:none; }
+#actions::-webkit-scrollbar { display:none; }
 button { background:#222236; color:var(--txt); border:1px solid var(--line); border-radius:8px; padding:6px 12px; cursor:pointer; font-size:12px; font-family:inherit; }
 button:hover { border-color:var(--accent); }
 button:focus-visible, .tool:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
 button.primary { background:var(--accent); color:#1a1a1a; font-weight:700; border-color:var(--accent); }
-#handtray { background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:16px 12px 6px; display:flex; gap:6px; overflow-x:auto; min-height:136px; align-items:center; justify-content:safe center; flex:none; }
+#handtray { background:var(--panel); border:1px solid var(--line); border-top:none; border-radius:0 0 14px 14px; padding:16px 12px 6px; display:flex; gap:6px; overflow-x:auto; min-height:136px; align-items:center; justify-content:safe center; flex:none; }
 /* mão em leque: rotação/offset por carta via style inline no HandTray */
 .fan { flex:none; }
 /* carta comprada: clone voa do baralho até a mão (drawfx.ts, WAAPI) */
@@ -213,7 +237,7 @@ button.primary { background:var(--accent); color:#1a1a1a; font-weight:700; borde
 /* bolinhas de energia ligada, coloridas por elemento */
 .edot { display:inline-block; width:13px; height:13px; border-radius:50%; border:2px solid rgba(255,255,255,.75); box-shadow:0 1px 2px rgba(0,0,0,.35); margin:0 1px; vertical-align:middle; }
 /* chip de Ferramenta ligada ("F"); nome completo no title */
-.tooldot { display:inline-block; min-width:13px; height:13px; border-radius:3px; background:var(--matink); color:#fff; font-size:9px; font-weight:700; line-height:13px; text-align:center; margin:0 1px; vertical-align:middle; }
+.tooldot { display:inline-block; height:13px; border-radius:3px; background:#2b3352; border:1px solid rgba(255,255,255,.35); color:#fff; font-size:9px; font-weight:700; line-height:13px; text-align:center; margin:0 1px; padding:0 3px; vertical-align:middle; }
 
 @media (prefers-reduced-motion: reduce) {
   .fieldcol .cardbox, .edot, .dmg, .base.picking { animation:none; transition:none; }
@@ -228,7 +252,8 @@ button.primary { background:var(--accent); color:#1a1a1a; font-weight:700; borde
 #preview.show { opacity:1; transform:scale(1); }
 #preview img { width:100%; border-radius:14px; display:block; }
 
-/* Modal de busca no deck (escolha pendente) */
-.choice-box { background:var(--panel, #14141c); border:1px solid #333; border-radius:12px; padding:24px; max-width:70vw; }
-.choice-title { font-size:16px; font-weight:700; color:var(--accent, #ffd75e); }
+/* Overlay de escolha pendente (busca / troca de ativo) */
+.choice-overlay { position:fixed; inset:0; background:rgba(5,5,10,.85); display:flex; align-items:center; justify-content:center; z-index:20; }
+.choice-box { background:var(--panel, #14141c); border:1px solid var(--line); border-radius:12px; padding:24px; max-width:70vw; display:flex; flex-direction:column; gap:16px; }
+.choice-title { font-size:15px; font-weight:700; color:var(--accent, #ffd75e); text-wrap:balance; }
 .choice-cards { display:flex; flex-wrap:wrap; gap:10px; justify-content:center; max-height:55vh; overflow-y:auto; padding:4px; }

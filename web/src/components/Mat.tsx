@@ -23,7 +23,7 @@ function Bench({ side, isYou, sel, onSelect, onDropHand, dragBench, pickMode }: 
               onClick={isYou && b ? () => onSelect('bench', i) : undefined}
               onDropCard={onDropHand ? data => onDropHand(i, data) : undefined}
               dragData={dragBench && b ? `bench:${i}` : undefined}
-              placeholder="+ Pokémon"
+              placeholder={isYou ? '+ Pokémon' : undefined}
               selected={isYou && sel?.kind === 'bench' && sel.idx === i}
               picking={isPicking} />
           )
@@ -45,7 +45,6 @@ function ActiveSpot({ side, isYou, sel, onSelect, onDropHand, pickMode }: {
   return (
     <div className="activewrap active">
       <div>
-        <div className="mlabel">Pokémon Ativo</div>
         <PokemonSlot view={side.active}
           onClick={isYou && side.active ? () => onSelect('active', -1) : undefined}
           onDropCard={onDropHand ? data => onDropHand(-1, data) : undefined}

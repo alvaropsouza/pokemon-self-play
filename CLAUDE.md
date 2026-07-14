@@ -35,11 +35,11 @@ Roadmap com todas as etapas e o que está pronto: **`PLANO.md`**.
 - Prêmios por nocaute: heurística por nome em `PrizeValue` (ex = 2, Mega ex = 3) — TCGdex não expõe a Rule Box.
 
 **Comandos** (via go-task; `task` sem argumento lista tudo — ver `Taskfile.yml`):
-- `task play` — partida contra o bot em http://localhost:8080 (`task play MYTYPE=Grass BOTTYPE=Fire SEED=3`).
+- `task play` — partida contra o bot em http://localhost:5173, com reload de front (Vite HMR) e back (watcher reinicia servidor ao mudar .go) (`task play MYTYPE=Grass BOTTYPE=Fire SEED=3`).
 - `task import -- <setID> [setID...]` — importa sets (IDs TCGdex, ex.: `me01`, `sve`; lista em `api.tcgdex.net/v2/en/sets`; flag `-standard-only` filtra H/I/J).
 - `task check` — build + vet + testes (rodar antes de commitar).
 - `task web-build` — recompila o frontend para web/dist (rodar após mudar web/src; commitar o dist).
-- `task web` — frontend em modo dev (Vite com HMR, proxy /api → :8080; rodar `task play` junto).
+- `task web` — só o frontend em modo dev (Vite com HMR, proxy /api → :8080); já incluso em `task play`.
 - Equivalentes diretos: `go run ./cmd/play ...`, `go run ./cmd/import ...`, `go test ./...`.
 
 **Desenvolvimento (importante para o Claude):** ao trabalhar em mudanças em dev, o usuário já está com os servidores rodando (`task play` + `task web`). **Não iniciar servidores** e **não usar Playwright/browser para validar** — o usuário sempre valida visualmente por conta própria em http://localhost:5173. Após mudanças no frontend, basta garantir que compila (`npx tsc --noEmit` em web/) e avisar que está pronto para validação. **Arquivos temporários** (scripts descartáveis, screenshots, saídas de debug) devem ser **deletados após o uso** — não deixar lixo no repositório.

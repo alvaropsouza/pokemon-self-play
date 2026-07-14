@@ -26,6 +26,11 @@ export function Card({ view, selected, onClick, dragData }: {
   const cls = 'cardbox' + (onClick ? ' click' : '') + (selected ? ' sel' : '')
   return (
     <div className={cls} onClick={onClick}
+      role={onClick ? 'button' : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      onKeyDown={onClick
+        ? e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick() } }
+        : undefined}
       draggable={dragData !== undefined}
       onDragStart={dragData !== undefined
         ? e => { e.dataTransfer.setData('text/plain', dragData); setPreview(null) }
@@ -92,13 +97,23 @@ export function PokemonSlot({ view, selected, onClick, onDropCard, dragData, pla
       onDropCard(e.dataTransfer.getData('text/plain'))
     },
   } : {}
+  // Em modo picking, o slot inteiro (incluindo padding do .base) responde ao clique.
+  // onClick fica só no Card quando não estamos em picking, evitando duplo disparo.
+  const containerClick = picking ? onClick : undefined
+  const cardClick = picking ? undefined : onClick
   const cls = 'base' + (over ? ' over' : '') + (picking && !over ? ' picking' : '')
   if (!view) return <div className={cls} {...dropProps}><EmptySlot label={droppable ? placeholder : undefined} /></div>
   const energies = view.energies ?? []
   return (
-    <div className={cls} {...dropProps}>
+    <div className={cls} {...dropProps}
+      onClick={containerClick}
+      role={containerClick ? 'button' : undefined}
+      tabIndex={containerClick ? 0 : undefined}
+      onKeyDown={containerClick
+        ? e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); containerClick() } }
+        : undefined}>
       {/* key pelo id: evoluir troca a carta e remonta o nó → animação de entrada */}
-      <Card key={view.card.id} view={view} selected={selected} onClick={onClick} dragData={dragData} />
+      <Card key={view.card.id} view={view} selected={selected} onClick={cardClick} dragData={dragData} />
       <HpGauge view={view} />
       {(energies.length > 0 || view.tool) && (
         <div className="sub">
@@ -106,7 +121,7 @@ export function PokemonSlot({ view, selected, onClick, onDropCard, dragData, pla
             <span key={i} className="edot" title={e.name}
               style={{ background: energyColor(e.nameEN) }} />
           ))}
-          {view.tool && <span className="tooldot" title={view.tool.name}>F</span>}
+          {view.tool && <span className="tooldot" title={view.tool.name}>{view.tool.name.slice(0, 3).toUpperCase()}</span>}
         </div>
       )}
     </div>

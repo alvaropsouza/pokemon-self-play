@@ -14,13 +14,8 @@ tasks:
     silent: true
 
   play:
-    desc: "Partida contra o bot em http://localhost:8080 (config via tela de lobby)"
-    deps: [web-build]
-    cmds:
-      - go run ./cmd/play
-
-  dev:
-    desc: "Dev com reload: Vite (HMR) em :5173 + backend reiniciado ao mudar .go"
+    desc: "Partida contra o bot com reload: UI em http://localhost:5173 (Vite HMR) + backend reiniciado ao mudar .go"
+    aliases: [dev]
     deps: [web, dev-api]
 
   dev-api:
@@ -44,7 +39,7 @@ tasks:
       - npm run build
 
   web:
-    desc: "Frontend em modo dev (Vite, proxy /api -> :8080; rode `task play` junto)"
+    desc: "Frontend em modo dev (Vite, proxy /api -> :8080; já incluso em `task play`)"
     dir: web
     cmds:
       - npm run dev

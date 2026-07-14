@@ -39,9 +39,10 @@ export interface SideView {
 }
 
 export interface PendingChoice {
+  kind: 'search' | 'switch_self' | 'switch_opp'
   max: number
-  dest: 'hand' | 'bench'
-  candidates: CardView[]
+  dest: string
+  candidates: (CardView | PokemonView)[]
 }
 
 export interface GameState {

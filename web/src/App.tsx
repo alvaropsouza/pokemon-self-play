@@ -145,7 +145,7 @@ function LobbyScreen({ onStart, err }: { onStart: (c: GameConfig) => void; err: 
   )
 }
 
-// Modal de busca no deck: escolhe até `max` candidatos (0 = falhar a busca).
+// Overlay de escolha pendente: busca no deck ou troca de Pokémon Ativo.
 function ChoiceOverlay({ pc, post }: {
   pc: NonNullable<GameState['pendingChoice']>
   post: (body: Record<string, unknown>) => void
@@ -154,25 +154,33 @@ function ChoiceOverlay({ pc, post }: {
   const toggle = (i: number) => setPicks(cur =>
     cur.includes(i) ? cur.filter(x => x !== i)
       : cur.length < pc.max ? [...cur, i] : cur)
-  const destTxt = pc.dest === 'bench' ? 'para o Banco' : 'para a mão'
+
+  const isSwitch = pc.kind === 'switch_self' || pc.kind === 'switch_opp'
+  const title = pc.kind === 'switch_self'
+    ? 'Escolha 1 Pokémon do Banco para trocar com o Ativo'
+    : pc.kind === 'switch_opp'
+      ? 'Escolha 1 Pokémon do Banco do oponente para virar Ativo'
+      : `Busca no deck: escolha até ${pc.max} carta${pc.max > 1 ? 's' : ''} ${pc.dest === 'bench' ? 'para o Banco' : 'para a mão'}`
+
+  const confirm = () => post({ action: 'resolve_choice', picks })
+  const skip = () => post({ action: 'resolve_choice', picks: [] })
+
   return (
-    <div id="winner">
+    <div className="choice-overlay">
       <div className="winner-box choice-box">
-        <div className="choice-title">
-          Busca no deck: escolha até {pc.max} carta{pc.max > 1 ? 's' : ''} {destTxt}
-        </div>
+        <div className="choice-title">{title}</div>
         <div className="choice-cards">
           {pc.candidates.map((c, i) => (
             <Card key={i} view={c} selected={picks.includes(i)} onClick={() => toggle(i)} />
           ))}
         </div>
         <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
-          <button className="primary" onClick={() => post({ action: 'resolve_choice', picks })}>
-            Confirmar ({picks.length})
+          <button className="primary" onClick={confirm}>
+            {isSwitch ? 'Confirmar' : `Confirmar (${picks.length})`}
           </button>
-          <button onClick={() => post({ action: 'resolve_choice', picks: [] })}>
-            Não pegar nada
-          </button>
+          {!isSwitch && (
+            <button onClick={skip}>Não pegar nada</button>
+          )}
         </div>
       </div>
     </div>
@@ -226,7 +234,9 @@ export default function App() {
   const post = useCallback((body: Record<string, unknown>) => {
     postAction(body).then(j => {
       setErr(j.error ?? '')
-      setS(j)
+      // Guarda contra panic do servidor: resposta sem `phase` não atualiza o estado
+      // (mantém o tabuleiro visível em vez de crashar no render).
+      if (j.phase) setS(j)
       setSel(null)
     }).catch(e => setErr(String(e)))
   }, [])
@@ -288,8 +298,10 @@ export default function App() {
                 else post({ action: 'place_bench', hand: i })
               }
             }} />
-          <ActionBar s={s} sel={sel} setSel={setSel} err={err} post={post} />
-          <HandTray s={s} sel={sel} onSelect={i => select('hand', i)} />
+          <div id="hand-zone">
+            <ActionBar s={s} sel={sel} setSel={setSel} err={err} post={post} />
+            <HandTray s={s} sel={sel} onSelect={i => select('hand', i)} />
+          </div>
         </div>
         <RightRail pane={pane} setPane={setPane} endTurn={() => post({ action: 'end_turn' })} />
         <Drawer pane={pane} s={s} post={post} />
