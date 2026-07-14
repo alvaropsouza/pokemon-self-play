@@ -1,7 +1,30 @@
 import { useContext, useState } from 'react'
 import type { CardView, PokemonView } from '../api'
-import { energyColor, energyImage } from '../energy'
+import { energyColor, energyDotStyle, energyImage } from '../energy'
 import { PreviewCtx } from '../preview'
+
+// Energias ligadas agrupadas por tipo: símbolo oficial + ×N quando N > 1.
+// O símbolo é o centro do scan real da carta de energia (recorte circular via
+// background); energia especial sem scan cai na bolinha de cor do tipo.
+export function EnergyDots({ energies }: { energies: CardView[] }) {
+  const groups = new Map<string, { name: string; nameEN: string; n: number }>()
+  for (const e of energies) {
+    const key = energyColor(e.nameEN)
+    const g = groups.get(key)
+    if (g) g.n++
+    else groups.set(key, { name: e.name, nameEN: e.nameEN, n: 1 })
+  }
+  return (
+    <>
+      {[...groups.entries()].map(([color, g]) => (
+        <span key={color} className="egroup" title={`${g.n}× ${g.name}`}>
+          <span className="edot" style={energyDotStyle(g.nameEN)} />
+          {g.n > 1 && <span className="ecount">×{g.n}</span>}
+        </span>
+      ))}
+    </>
+  )
+}
 
 // Sigla + cor por condição especial (sem emoji — PRODUCT.md).
 export const COND: Record<string, [string, string]> = {
@@ -42,11 +65,18 @@ export function Card({ view, selected, onClick, dragData }: {
         : <div className="card txt">{c.name}</div>}
       {/* key pelo valor: mudar o dano remonta o nó → pulso de dmgpop */}
       {pk && pk.damage > 0 && <span key={pk.damage} className="dmg">{pk.damage}</span>}
+      {/* energias/ferramenta como overlay na carta: nunca cortadas pelo layout */}
+      {pk && ((pk.energies?.length ?? 0) > 0 || pk.tool) && (
+        <span className="eside">
+          <EnergyDots energies={pk.energies ?? []} />
+          {pk.tool && <span className="tooldot" title={pk.tool.name}>{pk.tool.name.slice(0, 3).toUpperCase()}</span>}
+        </span>
+      )}
       {pk && pk.conditions.length > 0 && (
         <span className="cond">
           {pk.conditions.map(cd => {
             const [tag, bg] = COND[cd] ?? [cd.slice(0, 3).toUpperCase(), '#555']
-            return <span key={cd} className="cbadge" style={{ background: bg }} title={cd}>{tag}</span>
+            return <span key={cd} className="cbadge" style={{ background: bg }} title={cd} aria-label={cd}>{tag}</span>
           })}
         </span>
       )}
@@ -103,7 +133,6 @@ export function PokemonSlot({ view, selected, onClick, onDropCard, dragData, pla
   const cardClick = picking ? undefined : onClick
   const cls = 'base' + (over ? ' over' : '') + (picking && !over ? ' picking' : '')
   if (!view) return <div className={cls} {...dropProps}><EmptySlot label={droppable ? placeholder : undefined} /></div>
-  const energies = view.energies ?? []
   return (
     <div className={cls} {...dropProps}
       onClick={containerClick}
@@ -115,25 +144,16 @@ export function PokemonSlot({ view, selected, onClick, onDropCard, dragData, pla
       {/* key pelo id: evoluir troca a carta e remonta o nó → animação de entrada */}
       <Card key={view.card.id} view={view} selected={selected} onClick={cardClick} dragData={dragData} />
       <HpGauge view={view} />
-      {(energies.length > 0 || view.tool) && (
-        <div className="sub">
-          {energies.map((e, i) => (
-            <span key={i} className="edot" title={e.name}
-              style={{ background: energyColor(e.nameEN) }} />
-          ))}
-          {view.tool && <span className="tooldot" title={view.tool.name}>{view.tool.name.slice(0, 3).toUpperCase()}</span>}
-        </div>
-      )}
     </div>
   )
 }
 
 export function DeckPile({ count }: { count: number }) {
-  if (count <= 0) return <div className="pile empty" />
-  // Contagem sem badge: hover (title) e painel Partida.
+  if (count <= 0) return <div className="pile empty" aria-label="Baralho vazio" />
   return (
-    <div className="pile" title={`${count} carta${count !== 1 ? 's' : ''}`}>
-      <img className="back" src="/cardback.jpg" alt="verso do baralho" />
+    <div className="pile" aria-label={`Baralho: ${count} carta${count !== 1 ? 's' : ''}`}>
+      <img className="back" src="/cardback.jpg" alt="" />
+      <span className="cnt">{count}</span>
     </div>
   )
 }

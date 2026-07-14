@@ -102,6 +102,17 @@ func (g *Game) AttachTool(p, handIdx, slot int) error {
 	return nil
 }
 
+// checkDiscardCost valida custo "only if you discard N other cards from your
+// hand": a mão (fora a própria carta) precisa ter ao menos N cartas.
+func (g *Game) checkDiscardCost(p int, c *cards.Card) error {
+	for _, op := range CompileEffect(c.Effect.EN).Ops {
+		if op.Kind == OpDiscardFromHand && op.Cost && len(g.Players[p].Hand)-1 < op.N {
+			return fmt.Errorf("%s exige descartar %d outras cartas da mão", c.Name.EN, op.N)
+		}
+	}
+	return nil
+}
+
 // PlayItem joga um Item: sem limite por turno; a carta vai para o descarte.
 // O efeito do texto é resolvido manualmente.
 func (g *Game) PlayItem(p, handIdx int) error {
@@ -114,6 +125,9 @@ func (g *Game) PlayItem(p, handIdx int) error {
 	}
 	if c.Category != cards.CategoryTrainer || c.TrainerType != "Item" {
 		return fmt.Errorf("%s não é Item", c.Name.EN)
+	}
+	if err := g.checkDiscardCost(p, c); err != nil {
+		return err
 	}
 	g.removeFromHand(p, handIdx)
 	g.Players[p].Discard = append(g.Players[p].Discard, c.ID)
@@ -144,6 +158,9 @@ func (g *Game) PlaySupporter(p, handIdx int) error {
 	}
 	if c.Category != cards.CategoryTrainer || c.TrainerType != "Supporter" {
 		return fmt.Errorf("%s não é Suporte", c.Name.EN)
+	}
+	if err := g.checkDiscardCost(p, c); err != nil {
+		return err
 	}
 	g.removeFromHand(p, handIdx)
 	ps.Discard = append(ps.Discard, c.ID)

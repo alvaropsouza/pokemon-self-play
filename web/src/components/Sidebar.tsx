@@ -1,12 +1,14 @@
 import type { SideView } from '../api'
 
 function PrizeColumn({ side }: { side: SideView }) {
+  const n = side.prizes
   return (
     <div className="prizes">
       <h4>PRÊMIOS</h4>
-      <div className="col">
+      <div className="col" role="img"
+        aria-label={`${n} prêmio${n !== 1 ? 's' : ''} restante${n !== 1 ? 's' : ''}`}>
         {Array.from({ length: 6 }, (_, i) => (
-          <div key={i} className={'prize' + (i >= side.prizes ? ' taken' : '')} />
+          <div key={i} className={'prize' + (i >= n ? ' taken' : '')} aria-hidden="true" />
         ))}
       </div>
     </div>

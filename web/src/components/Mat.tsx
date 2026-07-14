@@ -1,7 +1,6 @@
 import type { CardView, PokemonView, SideView } from '../api'
 import type { Sel } from '../api'
-import { energyColor } from '../energy'
-import { COND, Card, DeckPile, DiscardPile, EmptySlot, PokemonSlot } from './Card'
+import { COND, Card, DeckPile, DiscardPile, EmptySlot, EnergyDots, PokemonSlot } from './Card'
 import { EnergyCost, canPay } from './ActionBar'
 
 // Golpes do Ativo do bot, somente leitura — informação pública (carta + energias
@@ -52,9 +51,7 @@ function BattleHud({ view }: { view: PokemonView | null | undefined }) {
       <div className="hud-foot">
         {hp > 0 && <span className="hud-hptxt">{rem}/{hp}</span>}
         <span className="hud-attach">
-          {energies.map((e, i) => (
-            <span key={i} className="edot" title={e.name} style={{ background: energyColor(e.nameEN) }} />
-          ))}
+          <EnergyDots energies={energies} />
           {view.tool && <span className="tooldot" title={view.tool.name}>{view.tool.name.slice(0, 3).toUpperCase()}</span>}
         </span>
       </div>

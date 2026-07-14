@@ -36,7 +36,7 @@ body {
 .pp.bot .avatar { color:var(--blue); background:rgba(95,140,255,.12); border-color:rgba(95,140,255,.4); }
 .pp.you .avatar { color:var(--accent); background:rgba(245,185,66,.12); border-color:rgba(245,185,66,.4); }
 .prizes { background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:8px; text-align:center; }
-.prizes h4 { margin:0 0 6px; font-size:10px; letter-spacing:1px; color:var(--dim); }
+.prizes h4 { margin:0 0 6px; font-size:11px; letter-spacing:1px; color:var(--dim); }
 /* prêmios = Pokébolas fechadas; coletado = bola "aberta" (apagada + encolhida) */
 .prizes .col { display:grid; grid-template-columns:repeat(3, auto); gap:7px; justify-content:center; }
 .prize { width:22px; height:22px; border-radius:50%; border:2px solid #1a2138; position:relative;
@@ -63,13 +63,9 @@ body {
   background:repeating-radial-gradient(circle at 50% 130%, transparent 0 54px, rgba(180,195,255,.05) 54px 57px);
 }
 .mat.you::before { background:repeating-radial-gradient(circle at 50% -30%, transparent 0 54px, rgba(245,215,150,.05) 54px 57px); }
-/* scanlines sutis: textura de tela clássica sobre o feltro */
-.mat::after {
-  content:''; position:absolute; inset:0; pointer-events:none;
-  background:repeating-linear-gradient(0deg, rgba(0,0,0,.05) 0 1px, transparent 1px 4px);
-}
+/* scanlines removidas: repeating-linear-gradient stripe é padrão proibido */
 .mat > * { position:relative; z-index:1; min-width:0; min-height:0; overflow:hidden; }
-.mlabel { font-size:10px; font-weight:700; letter-spacing:1px; text-transform:uppercase; color:var(--matink); opacity:.85; text-align:center; margin-bottom:4px; }
+.mlabel { font-size:11px; font-weight:700; letter-spacing:1px; text-transform:uppercase; color:var(--matink); opacity:.85; text-align:center; margin-bottom:4px; }
 .pilescol { display:flex; flex-direction:column; justify-content:space-around; align-items:center; }
 /* Estádio: zona compartilhada — ancorada na borda inferior do tapete do bot,
    junto à costura entre os dois lados (= centro da mesa física) */
@@ -123,7 +119,7 @@ body {
 .hud.empty { display:flex; align-items:center; justify-content:center; font-size:11px; opacity:.45; min-height:52px; }
 .hud-name { display:flex; justify-content:space-between; align-items:center; gap:8px; font-weight:800; font-size:13px; color:var(--txt); }
 .hud-hpline { display:flex; align-items:center; gap:6px; margin-top:6px; }
-.hud-hplabel { font-size:9px; font-weight:800; letter-spacing:1px; color:var(--accent); }
+.hud-hplabel { font-size:11px; font-weight:800; letter-spacing:1px; color:var(--accent); }
 .hud-bar { flex:1; height:8px; border-radius:4px; background:rgba(0,0,0,.55); border:1px solid rgba(255,255,255,.16); overflow:hidden; }
 .hud-bar i { display:block; height:100%; background:var(--ok); border-radius:3px; transition:width .3s ease-out, background .3s; }
 .hud-bar i.mid { background:#e3b62c; }
@@ -188,7 +184,7 @@ body {
 .hpbar i { display:block; height:100%; background:var(--ok); border-radius:2px; transition:width .25s ease-out; }
 .hpbar i.mid { background:#e3b62c; }
 .hpbar i.low { background:#d6543f; }
-.hptxt { font-size:10px; font-weight:700; text-align:center; color:var(--matink); }
+.hptxt { font-size:11px; font-weight:700; text-align:center; color:var(--matink); }
 
 /* pilhas/Estádio: elementos auxiliares — menores que qualquer carta em jogo */
 /* pilha realista: bordas claras das cartas empilhadas (escurecendo com a
@@ -304,10 +300,24 @@ button.primary { background:var(--accent); color:#1a1a1a; font-weight:700; borde
 .arb input, .arb select { background:var(--bg); color:var(--txt); border:1px solid var(--line); border-radius:6px; padding:4px; width:80px; margin:2px; font-family:inherit; }
 .arb .row { margin:6px 0; }
 .cfg-info { font-size:12px; color:var(--dim); }
+/* sair da partida: ação quieta no rodapé da gaveta, confirmação inline */
+.pane-cfg { display:flex; flex-direction:column; flex:1; min-height:0; }
+.cfg-exit { margin-top:auto; padding-top:12px; border-top:1px solid var(--line); }
+.exit-btn { width:100%; background:none; border:1px solid var(--line); border-radius:8px; color:var(--dim);
+            font-size:12px; font-family:inherit; padding:8px 12px; cursor:pointer;
+            transition:border-color .15s, color .15s, background .15s; }
+.exit-btn:hover { border-color:var(--bad); color:var(--txt); }
+.exit-btn.danger { background:var(--danger); border-color:var(--danger); color:#fff; font-weight:700; }
+.exit-btn.danger:hover { background:var(--danger2); }
+.exit-confirm { display:flex; flex-direction:column; gap:8px; font-size:12px; color:var(--txt); }
+.exit-row { display:flex; gap:8px; }
+.exit-row .exit-btn { width:auto; flex:1; }
 
-#winner { position:fixed; inset:0; background:rgba(5,5,10,.85); display:flex; align-items:center; justify-content:center; z-index:20; }
-.winner-box { display:flex; flex-direction:column; align-items:center; gap:20px; }
-.winner-txt { font-size:30px; color:var(--accent); font-weight:800; }
+#winner { position:fixed; inset:0; background:rgba(5,5,10,.85); display:flex; align-items:center; justify-content:center; z-index:20; animation:fadein .35s ease-out; }
+@keyframes fadein { from { opacity:0; } }
+.winner-box { display:flex; flex-direction:column; align-items:center; gap:20px; animation:popwin .4s cubic-bezier(0.22,1,0.36,1); }
+@keyframes popwin { from { opacity:0; transform:scale(.85); } }
+.winner-txt { font-size:30px; color:var(--accent); font-weight:800; text-wrap:balance; }
 
 /* ---- lobby: tela de confronto ---- */
 #lobby { display:flex; align-items:center; justify-content:center; height:100vh; position:relative; overflow:hidden; }
@@ -317,30 +327,100 @@ button.primary { background:var(--accent); color:#1a1a1a; font-weight:700; borde
   background:linear-gradient(transparent 46%, rgba(125,135,204,.07) 46%, rgba(125,135,204,.07) 54%, transparent 54%);
   pointer-events:none;
 }
-.lobby-box { position:relative; display:flex; flex-direction:column; gap:28px; align-items:center; max-width:640px; padding:24px; }
+.lobby-box { position:relative; display:flex; flex-direction:column; gap:28px; align-items:center; max-width:1080px; padding:24px; }
 .lobby-head { text-align:center; }
 .lobby-title { font-size:clamp(36px, 7vh, 56px); font-weight:800; letter-spacing:-.02em; color:var(--txt); line-height:1.05; text-wrap:balance; }
 .lobby-sub { color:var(--dim); font-size:13px; margin-top:8px; }
-.lobby-sides { display:grid; grid-template-columns:1fr auto 1fr; gap:18px; align-items:start; width:100%; }
-.lobby-side { background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:14px; display:flex; flex-direction:column; gap:10px; }
+.lobby-sides { display:grid; grid-template-columns:minmax(0,1fr) auto minmax(0,1fr); gap:18px; align-items:start; width:100%; }
+.lobby-side { background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:18px; display:flex; flex-direction:column; gap:10px; }
 .lobby-side h2 { margin:0; font-size:13px; font-weight:800; letter-spacing:1px; text-transform:uppercase; text-align:center; }
 .lobby-side.you { border-color:rgba(245,185,66,.45); }
 .lobby-side.you h2 { color:var(--accent); }
 .lobby-side.bot { border-color:rgba(95,140,255,.45); }
 .lobby-side.bot h2 { color:var(--blue); }
 .lobby-vs { align-self:center; font-size:26px; font-weight:200; color:var(--dim); text-transform:uppercase; letter-spacing:2px; }
-.typegrid { display:grid; grid-template-columns:repeat(2, 1fr); gap:6px; }
-.typechip { display:flex; align-items:center; gap:7px; padding:7px 10px; background:#1a1a28; border:1px solid var(--line); border-radius:8px;
-            color:var(--dim); font-size:12px; cursor:pointer; text-align:left; font-family:inherit; transition:border-color .15s, background .15s; }
-.typechip .edot { animation:none; flex:none; }
-.typechip:hover { border-color:var(--el); color:var(--txt); }
-.typechip.on { border-color:var(--el); background:color-mix(in srgb, var(--el) 22%, var(--panel)); color:var(--txt); font-weight:700; }
-.typechip.on .edot { box-shadow:0 0 8px var(--el); }
+/* ---- menu de Battle Decks (lobby) ---- */
+.deckshow { gap:10px; min-width:0; }
+.coverimg { aspect-ratio:63/88; border-radius:4.5%/3.2%; object-fit:cover;
+            box-shadow:0 0 0 1px rgba(255,255,255,.08), 0 6px 30px color-mix(in srgb, var(--el) 45%, transparent), 0 12px 24px rgba(0,0,0,.55);
+            animation:coverin .3s cubic-bezier(0.22,1,0.36,1); }
+.coverimg.mini { width:120px; flex:none; }
+@keyframes coverin { from { opacity:0; transform:translateY(10px) scale(.96); } }
+.dk-arrow { flex:none; width:34px; height:34px; border-radius:50%; border:1px solid var(--line); background:#1a1a28;
+            color:var(--dim); font-size:20px; line-height:1; cursor:pointer; transition:border-color .15s, color .15s; }
+.dk-arrow:hover { border-color:var(--el, var(--accent)); color:var(--txt); }
+.dk-search { background:#1a1a28; border:1px solid var(--line); border-radius:8px; color:var(--txt);
+             font-size:12px; font-family:inherit; padding:7px 10px; width:100%; }
+.dk-search::placeholder { color:var(--dim); }
+.dk-search:focus { outline:none; border-color:var(--el, var(--accent)); }
+.dk-menu { display:flex; flex-direction:column; gap:2px; height:240px; overflow-y:auto;
+           scrollbar-width:thin; scrollbar-color:var(--line) transparent; }
+.dk-none { color:var(--dim); font-size:12px; padding:8px; text-align:center; }
+.dk-row { display:flex; align-items:center; gap:8px; width:100%; text-align:left; background:none;
+          border:1px solid transparent; border-radius:8px; padding:4px 6px; cursor:pointer;
+          font-family:inherit; color:var(--dim); font-size:12px; transition:background .15s, border-color .15s; }
+.dk-row img { width:26px; aspect-ratio:63/88; border-radius:3px; object-fit:cover; flex:none; }
+.dk-row:hover { background:#1a1a28; color:var(--txt); }
+.dk-row.on { border-color:var(--el); background:color-mix(in srgb, var(--el) 14%, var(--panel)); color:var(--txt); font-weight:700; }
+.dk-row-name { flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.dk-row-type { display:flex; align-items:center; gap:4px; flex:none; font-size:11px; font-weight:400; }
+.dk-row-type .edot { animation:none; width:10px; height:10px; }
+.dk-sel { display:flex; gap:12px; align-items:center; border-top:1px solid var(--line); padding-top:10px; }
+.dk-sel-info { display:flex; flex-direction:column; gap:6px; align-items:flex-start; min-width:0; }
+.deckname { font-size:14px; font-weight:800; color:var(--txt); text-wrap:balance; }
+.deckmeta { color:var(--dim); font-size:11.5px; }
+.dk-view { background:none; border:1px solid var(--line); border-radius:8px; color:var(--dim); font-size:12px; padding:6px 14px;
+           cursor:pointer; font-family:inherit; transition:border-color .15s, color .15s; }
+.dk-view:hover { border-color:var(--el, var(--accent)); color:var(--txt); }
+
+/* ---- slide das 60 cartas ---- */
+.deckviewer { position:fixed; inset:0; background:rgba(5,5,10,.82); backdrop-filter:blur(4px); z-index:60;
+              display:flex; align-items:center; justify-content:center; }
+.dv-box { background:var(--panel); border:1px solid var(--line); border-radius:16px; padding:14px 16px 18px;
+          width:min(1080px, 94vw); display:flex; flex-direction:column; gap:12px; }
+.dv-head { display:flex; align-items:center; gap:8px; }
+.dv-head .edot { animation:none; flex:none; }
+.dv-title { font-weight:800; color:var(--txt); font-size:15px; }
+.dv-sub { color:var(--dim); font-size:11.5px; margin-left:4px; flex:1; }
+.dv-close { background:none; border:none; color:var(--dim); font-size:26px; line-height:1; cursor:pointer; padding:0 4px; }
+.dv-close:hover { color:var(--txt); }
+.dv-wrap { display:flex; align-items:center; gap:8px; min-width:0; }
+.dv-strip { display:flex; gap:14px; overflow-x:auto; scroll-snap-type:x proximity; padding:6px 2px 10px; min-width:0;
+            scrollbar-width:thin; scrollbar-color:var(--line) transparent; }
+.dv-card { flex:none; width:150px; margin:0; scroll-snap-align:start; position:relative; text-align:center; }
+.dv-card img { width:100%; aspect-ratio:63/88; border-radius:4.5%/3.2%; object-fit:cover; box-shadow:0 4px 14px rgba(0,0,0,.5); }
+.dv-count { position:absolute; top:6px; right:6px; background:rgba(8,8,13,.85); border:1px solid var(--line);
+            color:var(--txt); font-size:12px; font-weight:800; border-radius:999px; padding:2px 8px; }
+.dv-card figcaption { color:var(--dim); font-size:11px; margin-top:5px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+/* lista completa abaixo do slide, agrupada por categoria; clique rola até a carta */
+.dv-list { display:grid; grid-template-columns:repeat(3, 1fr); gap:14px; max-height:32vh; overflow-y:auto;
+           border-top:1px solid var(--line); padding-top:12px;
+           scrollbar-width:thin; scrollbar-color:var(--line) transparent; }
+.dv-group h3 { margin:0 0 6px; font-size:11px; font-weight:800; letter-spacing:1px; text-transform:uppercase; color:var(--dim); }
+.dv-group h3 span { color:var(--txt); margin-left:4px; }
+.dv-group ul { list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:2px; }
+.dv-group button { display:block; width:100%; text-align:left; background:none; border:none; border-radius:6px;
+                   color:var(--txt); font-size:12px; font-family:inherit; padding:3px 8px; cursor:pointer; }
+.dv-group button:hover { background:#1a1a28; }
+.dv-group b { color:var(--dim); font-weight:700; margin-right:2px; }
+@media (max-width: 720px) { .dv-list { grid-template-columns:1fr; } }
 .lobby-start { font-size:15px; padding:12px 44px; border-radius:10px; letter-spacing:.3px; }
 .lobby-err { color:var(--bad); font-size:12px; background:rgba(255,123,107,.12); border:1px solid rgba(255,123,107,.4); border-radius:8px; padding:6px 12px; }
 
 /* bolinhas de energia ligada, coloridas por elemento */
 .edot { display:inline-block; width:13px; height:13px; border-radius:50%; border:2px solid rgba(255,255,255,.75); box-shadow:0 1px 2px rgba(0,0,0,.35); margin:0 1px; vertical-align:middle; }
+/* grupo por tipo: bolinha + contador ×N (contagem legível no banco e no HUD) */
+.egroup { display:inline-flex; align-items:center; gap:1px; margin:0 2px; }
+.egroup .ecount { font-size:10px; font-weight:800; color:var(--matink); }
+.hud-attach .ecount { color:var(--txt); }
+/* energias/ferramenta sobre a carta (canto superior esquerdo), como o badge de
+   dano — imune a cortes de layout; some no palco (HUD é a fonte visível lá) */
+.eside { position:absolute; top:2px; left:2px; display:flex; flex-direction:column; align-items:flex-start; gap:2px;
+         background:rgba(0,0,0,.55); border-radius:8px; padding:2px 3px; }
+/* símbolo precisa de área: bolinhas maiores no overlay da carta */
+.eside .edot { width:17px; height:17px; }
+.eside .ecount { color:#fff; }
+.stage .eside { display:none; }
 /* chip de Ferramenta ligada ("F"); nome completo no title */
 .tooldot { display:inline-block; height:13px; border-radius:3px; background:var(--chip); border:1px solid rgba(255,255,255,.35); color:#fff; font-size:9px; font-weight:700; line-height:13px; text-align:center; margin:0 1px; padding:0 3px; vertical-align:middle; }
 
@@ -352,9 +432,10 @@ button.primary { background:var(--accent); color:#1a1a1a; font-weight:700; borde
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .battlefield .cardbox, .stage .cardbox, .edot, .dmg, .base.picking, #ctxbar, .toast { animation:none; transition:none; }
+  .battlefield .cardbox, .stage .cardbox, .edot, .dmg, .base.picking, #ctxbar, .toast, .coverimg { animation:none; transition:none; }
   #handtray .card, .hpbar i, .hud-bar i, .prize, .pp, #preview, .hud-status, .tool, #endturn { transition:none; }
   #endturn:hover { transform:none; }
+  #winner, .winner-box { animation:none; }
 }
 
 /* ---- painel de preview no hover ---- */

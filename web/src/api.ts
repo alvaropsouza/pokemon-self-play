@@ -39,8 +39,9 @@ export interface SideView {
 }
 
 export interface PendingChoice {
-  kind: 'search' | 'switch_self' | 'switch_opp'
+  kind: 'search' | 'switch_self' | 'switch_opp' | 'discard_hand'
   max: number
+  min: number
   dest: string
   candidates: (CardView | PokemonView)[]
 }
@@ -62,6 +63,21 @@ export interface GameState {
 export interface GameConfig {
   mytype: string
   bottype: string
+}
+
+// Battle Deck fixo servido por /api/decks para a tela de seleção.
+export interface DeckEntry {
+  card: CardView
+  count: number
+}
+
+export interface DeckInfo {
+  id: string
+  type: string
+  name: string
+  star: CardView
+  counts: Record<string, number>
+  cards: DeckEntry[]
 }
 
 export type Sel =
@@ -92,6 +108,11 @@ export async function postAction(body: Record<string, unknown>): Promise<GameSta
     body: JSON.stringify(body),
   })
   return readJSON<GameState>(r)
+}
+
+export async function fetchDecks(): Promise<DeckInfo[]> {
+  const r = await fetch('/api/decks')
+  return readJSON<DeckInfo[]>(r)
 }
 
 export async function postNew(config: GameConfig): Promise<GameState> {

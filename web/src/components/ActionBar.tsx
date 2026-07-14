@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { CardView, GameState } from '../api'
 import type { Sel } from '../api'
-import { energyColor } from '../energy'
+import { energyDotStyle } from '../energy'
 
 // Custo pagável com as energias ligadas? Tipados casam por prefixo do nome EN
 // ("Fire Energy" paga Fire); Colorless aceita qualquer sobra.
@@ -36,7 +36,7 @@ export function EnergyCost({ cost }: { cost: string[] | null }) {
   return (
     <span className="btn-cost">
       {cost.map((t, i) => (
-        <span key={i} className="edot" style={{ background: energyColor(t) }} title={t} />
+        <span key={i} className="edot" style={energyDotStyle(t)} title={t} />
       ))}
     </span>
   )
@@ -164,7 +164,7 @@ export function ContextBar({ s, sel, setSel, post }: {
                 {energies.map((e, i) => (
                   <span key={i}
                     className={'edot selectable' + (chosen.includes(i) ? ' chosen' : '')}
-                    style={{ background: energyColor(e.nameEN) }}
+                    style={energyDotStyle(e.nameEN)}
                     title={e.name}
                     role="button" tabIndex={0}
                     aria-pressed={chosen.includes(i)} aria-label={e.name}

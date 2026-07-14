@@ -39,6 +39,7 @@ const (
 	OpSwitchOpp          OpKind = "switch_opp"            // força oponente a trazer Pokémon do Banco (atacante escolhe qual)
 	OpDiscardOppEnergy   OpKind = "discard_opp_energy"    // descarta N Energias do Ativo do oponente (N=-1 → todas)
 	OpDamageSelf         OpKind = "damage_self"           // coloca N de dano no próprio Ativo (recuo/recoil)
+	OpDiscardFromHand    OpKind = "discard_from_hand"     // descarta N cartas da mão (escolha do jogador)
 )
 
 // Op é uma operação primitiva compilada do texto do efeito.
@@ -51,6 +52,7 @@ type Op struct {
 	OnSelf      bool   `json:"onSelf,omitempty"`       // OpStatus: alvo é o próprio Ativo (senão, o do oponente)
 	Flip        bool   `json:"flip,omitempty"`         // executa só se a moeda der cara
 	Tools       bool   `json:"tools,omitempty"`        // OpShuffleHandBoth: ferramentas voltam ao deck também
+	Cost        bool   `json:"cost,omitempty"`         // OpDiscardFromHand: custo obrigatório ("only if") — bloqueia jogar sem N cartas
 	Dest        string `json:"dest,omitempty"`         // OpSearch: "hand" | "bench"
 	Find        []Find `json:"find,omitempty"`         // OpSearch: critérios (casa qualquer um)
 }
@@ -90,6 +92,12 @@ var patterns = []pattern{
 	}},
 	{regexp.MustCompile(`discard your hand`), func(m []string) []Op {
 		return []Op{{Kind: OpDiscardHand}}
+	}},
+	{regexp.MustCompile(`you can use this card only if you discard (\d+) other cards? from your hand`), func(m []string) []Op {
+		return []Op{{Kind: OpDiscardFromHand, N: atoi(m[1]), Cost: true}}
+	}},
+	{regexp.MustCompile(`discard (\d+) (?:other )?cards? from your hand`), func(m []string) []Op {
+		return []Op{{Kind: OpDiscardFromHand, N: atoi(m[1])}}
 	}},
 	{regexp.MustCompile(`draw cards? until you have (\d+) cards? in your hand`), func(m []string) []Op {
 		return []Op{{Kind: OpDrawUntil, N: atoi(m[1])}}
@@ -195,9 +203,18 @@ var symbolType = map[string]string{
 
 var reFindAlt = regexp.MustCompile(`^(?:an? )?(basic )?(?:\{(\w)\} )?(pokemon|energy)(?: cards?)?$`)
 
+// reHPSuffix: "… with N hp or less" no fim da lista de busca. Extraído ANTES do
+// split por " or " (o "or" de "or less" quebraria as alternativas).
+var reHPSuffix = regexp.MustCompile(` with (\d+) hp or less$`)
+
 // parseFinds interpreta a lista de alternativas ("a basic {f} energy card or a
 // basic {f} pokemon"). Qualquer alternativa não reconhecida → nil.
 func parseFinds(list string) []Find {
+	maxHP := 0
+	if m := reHPSuffix.FindStringSubmatch(list); m != nil {
+		maxHP = atoi(m[1])
+		list = strings.TrimSuffix(list, m[0])
+	}
 	var finds []Find
 	for _, alt := range strings.Split(list, " or ") {
 		m := reFindAlt.FindStringSubmatch(strings.TrimSpace(alt))
@@ -211,9 +228,10 @@ func parseFinds(list string) []Find {
 			if m[1] != "" {
 				f.Stage = "Basic"
 			}
+			f.MaxHP = maxHP
 		case "energy":
-			// Só Energia Básica é suportada ("basic ... energy").
-			if m[1] == "" {
+			// Só Energia Básica é suportada ("basic ... energy"); HP não se aplica.
+			if m[1] == "" || maxHP > 0 {
 				return nil
 			}
 			f.Category = "Energy"
@@ -365,7 +383,7 @@ func (g *Game) applyAttackEffect(p int, atk cards.Attack, attacker *PokemonInPla
 	// ponytail: ops que criam escolha pendente em ataque ficam manual — a
 	// escolha precisaria ser resolvida ANTES de finishTurn; Treinadores cobrem.
 	for _, op := range ce.Ops {
-		if op.Kind == OpSearch || op.Kind == OpSwitchSelf || op.Kind == OpSwitchOpp {
+		if op.Kind == OpSearch || op.Kind == OpSwitchSelf || op.Kind == OpSwitchOpp || op.Kind == OpDiscardFromHand {
 			ce = CompiledEffect{Manual: true}
 			break
 		}
@@ -466,13 +484,14 @@ func (g *Game) runOps(p int, ops []Op, attacker *PokemonInPlay) {
 			}
 			return // auto-resolvida: startSearch já rodou o restante
 		case OpSwitchSelf:
-			if g.startSwitchPending(p, false, ops[i+1:]) {
-				return
-			}
+			g.startSwitchPending(p, false, ops[i+1:])
+			return // pendente ou auto-resolvida: restante já tratado
 		case OpSwitchOpp:
-			if g.startSwitchPending(p, true, ops[i+1:]) {
-				return
-			}
+			g.startSwitchPending(p, true, ops[i+1:])
+			return
+		case OpDiscardFromHand:
+			g.startDiscardHand(p, op, ops[i+1:])
+			return
 		case OpDiscardOppEnergy:
 			opp := 1 - p
 			if a := g.Players[opp].Active; a != nil {

@@ -110,6 +110,101 @@ func TestSearchResolveEmptyPicks(t *testing.T) {
 	}
 }
 
+// newUltraBallGame: partida com Ultra Ball na mão do jogador 0.
+func newUltraBallGame(t *testing.T) *Game {
+	t.Helper()
+	s := testStore()
+	s.Put(&cards.Card{
+		ID: "t-ultra", Name: cards.Localized{EN: "Ultra Ball"}, Category: cards.CategoryTrainer,
+		TrainerType: "Item", RegulationMark: "H",
+		Effect: cards.Localized{EN: "You can use this card only if you discard 2 other cards from your hand.\n\nSearch your deck for a Pokémon, reveal it, and put it into your hand. Then, shuffle your deck."},
+	})
+	d := deck60(map[string]int{"t-fire1": 20, "t-fireE": 20, "t-ultra": 20})
+	d2 := deck60(map[string]int{"t-water1": 30, "t-waterE": 30})
+	g, err := New(s, [2][]string{d, d2}, 42, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for p := 0; p < 2; p++ {
+		if err := g.PlaceActive(p, findInHand(t, g, p, cards.CategoryPokemon)); err != nil {
+			t.Fatal(err)
+		}
+		if err := g.FinishSetup(p); err != nil {
+			t.Fatal(err)
+		}
+	}
+	return g
+}
+
+func TestDiscardCostItem(t *testing.T) {
+	g := newUltraBallGame(t)
+	idx := handIdxOf(g, 0, "t-ultra")
+	if idx < 0 {
+		t.Skip("t-ultra não veio na mão inicial com esta seed")
+	}
+	handBefore := len(g.Players[0].Hand)
+	discardBefore := len(g.Players[0].Discard)
+
+	if err := g.PlayItem(0, idx); err != nil {
+		t.Fatal(err)
+	}
+	pc := g.Pending
+	if pc == nil || pc.Kind != ChoiceDiscardHand || pc.Min != 2 || pc.Max != 2 {
+		t.Fatalf("escolha pendente errada: %+v", pc)
+	}
+	// Candidatos são a mão restante (Ultra Ball já saiu).
+	if len(pc.Candidates) != handBefore-1 {
+		t.Fatalf("candidatos: esperado %d, veio %d", handBefore-1, len(pc.Candidates))
+	}
+	// Descartar menos que o mínimo falha.
+	if err := g.ResolveChoice(0, []int{0}); err == nil {
+		t.Error("abaixo do mínimo deveria falhar")
+	}
+	if err := g.ResolveChoice(0, []int{0, 1}); err != nil {
+		t.Fatal(err)
+	}
+	// Descarte encadeia na busca do deck.
+	if g.Pending == nil || g.Pending.Kind != ChoiceSearch {
+		t.Fatalf("busca pendente esperada após descarte, veio %+v", g.Pending)
+	}
+	if err := g.ResolveChoice(0, []int{0}); err != nil {
+		t.Fatal(err)
+	}
+	// -1 Ultra Ball, -2 descartadas, +1 buscada.
+	if got := len(g.Players[0].Hand); got != handBefore-2 {
+		t.Errorf("mão: esperado %d, veio %d", handBefore-2, got)
+	}
+	// +1 Ultra Ball, +2 descartadas.
+	if got := len(g.Players[0].Discard); got != discardBefore+3 {
+		t.Errorf("descarte: esperado %d, veio %d", discardBefore+3, got)
+	}
+}
+
+func TestDiscardCostUnpayable(t *testing.T) {
+	g := newUltraBallGame(t)
+	idx := handIdxOf(g, 0, "t-ultra")
+	if idx < 0 {
+		t.Skip("t-ultra não veio na mão inicial com esta seed")
+	}
+	// Esvazia a mão até sobrar só a Ultra Ball e 1 carta (custo impagável).
+	ps := g.Players[0]
+	ultra := ps.Hand[idx]
+	other := ""
+	for _, id := range ps.Hand {
+		if id != ultra {
+			other = id
+			break
+		}
+	}
+	ps.Hand = []string{ultra, other}
+	if err := g.PlayItem(0, 0); err == nil {
+		t.Fatal("custo impagável deveria bloquear a jogada")
+	}
+	if len(ps.Hand) != 2 || g.Pending != nil {
+		t.Error("jogada bloqueada não pode alterar mão nem criar pendência")
+	}
+}
+
 func TestSearchInvalidPicks(t *testing.T) {
 	g := newSearchGame(t)
 	idx := handIdxOf(g, 0, "t-gong")

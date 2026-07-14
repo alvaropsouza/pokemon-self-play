@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from 'react'
-import { fetchState, postAction, postNew, type CardView, type GameConfig, type GameState, type Sel } from './api'
-import { energyColor } from './energy'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type RefObject } from 'react'
+import { fetchDecks, fetchState, postAction, postNew, type CardView, type DeckInfo, type GameConfig, type GameState, type Sel } from './api'
+import { energyColor, energyDotStyle, energyImage, hiresImage } from './energy'
 import { cancelFlights, flyFromDeck } from './drawfx'
 import { CardPreview, PreviewCtx, type Preview } from './preview'
 import { Sidebar } from './components/Sidebar'
@@ -8,6 +8,30 @@ import { BotMat, YouMat } from './components/Mat'
 import { AttackMenu, ContextBar, PHASE_LABEL, TurnTimer } from './components/ActionBar'
 import { Card } from './components/Card'
 import { Drawer, type Pane } from './components/Drawer'
+
+function useFocusTrap(ref: RefObject<HTMLElement | null>, active = true) {
+  useEffect(() => {
+    if (!active) return
+    const el = ref.current
+    if (!el) return
+    const focusable = Array.from(el.querySelectorAll<HTMLElement>(
+      'button:not([disabled]), [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+    ))
+    focusable[0]?.focus()
+    const trap = (e: KeyboardEvent) => {
+      if (e.key !== 'Tab') return
+      const first = focusable[0]
+      const last = focusable[focusable.length - 1]
+      if (e.shiftKey) {
+        if (document.activeElement === first) { e.preventDefault(); last?.focus() }
+      } else {
+        if (document.activeElement === last) { e.preventDefault(); first?.focus() }
+      }
+    }
+    el.addEventListener('keydown', trap)
+    return () => el.removeEventListener('keydown', trap)
+  }, [ref, active])
+}
 
 function HandTray({ s, sel, onSelect }: {
   s: GameState
@@ -141,53 +165,175 @@ function Toasts({ s, err, errN }: { s: GameState; err: string; errN: number }) {
   )
 }
 
-const TYPES: [string, string][] = [
-  ['Grass', 'Planta'], ['Fire', 'Fogo'], ['Water', 'Água'], ['Lightning', 'Elétrico'],
-  ['Psychic', 'Psíquico'], ['Fighting', 'Lutador'], ['Darkness', 'Escuridão'],
-  ['Metal', 'Metal'], ['Dragon', 'Dragão'], ['Colorless', 'Incolor'],
-]
+const TYPE_PT: Record<string, string> = {
+  Grass: 'Planta', Fire: 'Fogo', Water: 'Água', Lightning: 'Elétrico',
+  Psychic: 'Psíquico', Fighting: 'Lutador', Darkness: 'Escuridão',
+  Metal: 'Metal', Dragon: 'Dragão', Colorless: 'Incolor',
+}
 
-function TypePicker({ value, onChange }: { value: string; onChange: (t: string) => void }) {
+const cardImg = (c: CardView) => c.image || (c.category === 'Energy' ? energyImage(c.nameEN) : '')
+
+// Menu de decks de um lado: busca + lista rolável; deck selecionado ganha
+// capa (carta-estrela), composição e botão para abrir o slide das 60 cartas.
+function DeckMenu({ decks, sel, setSel, who, onView }: {
+  decks: DeckInfo[]
+  sel: string // id do deck selecionado
+  setSel: (id: string) => void
+  who: 'you' | 'bot'
+  onView: (d: DeckInfo) => void
+}) {
+  const [q, setQ] = useState('')
+  const d = decks.find(dk => dk.id === sel) ?? decks[0]
+  const col = energyColor(d.type)
+  const cover = d.star.image ? hiresImage(d.star.image) : cardImg(d.star)
+  const n = (cat: string) => d.counts[cat] ?? 0
+  const norm = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
+  const nq = norm(q.trim())
+  const hits = decks.filter(dk =>
+    !nq || norm(`${dk.name} ${dk.type} ${TYPE_PT[dk.type] ?? ''} ${dk.star.name}`).includes(nq))
   return (
-    <div className="typegrid">
-      {TYPES.map(([en, pt]) => (
-        <button key={en} type="button"
-          className={'typechip' + (value === en ? ' on' : '')}
-          style={{ '--el': energyColor(en) } as CSSProperties}
-          onClick={() => onChange(en)}>
-          <span className="edot" style={{ background: energyColor(en) }} />{pt}
-        </button>
-      ))}
+    <section className={`lobby-side deckshow ${who}`} style={{ '--el': col } as CSSProperties}>
+      <h2>{who === 'you' ? 'Você' : 'Bot'}</h2>
+      <input type="search" className="dk-search" placeholder="Buscar deck ou tipo…"
+        value={q} onChange={e => setQ(e.target.value)} aria-label="Buscar deck" />
+      <div className="dk-menu" role="listbox" aria-label={`Decks — ${who === 'you' ? 'você' : 'bot'}`}>
+        {hits.length === 0 && <div className="dk-none">Nenhum deck para “{q}”</div>}
+        {hits.map(dk => (
+          <button key={dk.id} type="button" role="option" aria-selected={dk.id === d.id}
+            className={'dk-row' + (dk.id === d.id ? ' on' : '')}
+            style={{ '--el': energyColor(dk.type) } as CSSProperties}
+            onClick={() => setSel(dk.id)}>
+            <img src={cardImg(dk.star)} alt="" loading="lazy" />
+            <span className="dk-row-name">{dk.name}</span>
+            <span className="dk-row-type">
+              <i className="edot" style={energyDotStyle(dk.type)} />
+              {TYPE_PT[dk.type] ?? dk.type}
+            </span>
+          </button>
+        ))}
+      </div>
+      <div className="dk-sel">
+        {/* key: trocar de deck remonta a imagem → animação de entrada */}
+        <img key={d.id} className="coverimg mini" src={cover} alt={d.name} />
+        <div className="dk-sel-info">
+          <div className="deckname">{d.name}</div>
+          <div className="deckmeta">
+            {n('Pokemon')} Pokémon · {n('Trainer')} Treinadores · {n('Energy')} Energias
+          </div>
+          <button type="button" className="dk-view" onClick={() => onView(d)}>Ver as 60 cartas</button>
+        </div>
+      </div>
+    </section>
+  )
+}
+
+// Slide horizontal com todas as cartas do deck (scroll-snap + setas).
+function DeckViewer({ deck, onClose }: { deck: DeckInfo; onClose: () => void }) {
+  const boxRef = useRef<HTMLDivElement>(null)
+  useFocusTrap(boxRef)
+  const stripRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    const h = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose()
+      if (e.key === 'ArrowLeft') stripRef.current?.scrollBy({ left: -400, behavior: 'smooth' })
+      if (e.key === 'ArrowRight') stripRef.current?.scrollBy({ left: 400, behavior: 'smooth' })
+    }
+    window.addEventListener('keydown', h)
+    return () => window.removeEventListener('keydown', h)
+  }, [onClose])
+  const scroll = (dir: number) => stripRef.current?.scrollBy({ left: dir * 400, behavior: 'smooth' })
+  // Clique na lista rola o slide até a carta correspondente (mesma ordem).
+  const goTo = (i: number) => stripRef.current?.children[i]
+    ?.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' })
+  const groups: [string, string][] = [['Pokemon', 'Pokémon'], ['Trainer', 'Treinadores'], ['Energy', 'Energias']]
+  return (
+    <div className="deckviewer" onClick={onClose}>
+      <div className="dv-box" role="dialog" aria-modal="true" aria-label={deck.name} ref={boxRef} onClick={e => e.stopPropagation()}>
+        <header className="dv-head">
+          <span className="edot" style={energyDotStyle(deck.type)} />
+          <span className="dv-title">{deck.name}</span>
+          <span className="dv-sub">{deck.cards.length} cartas distintas · 60 no total</span>
+          <button type="button" className="dv-close" aria-label="Fechar" onClick={onClose}>×</button>
+        </header>
+        <div className="dv-wrap">
+          <button type="button" className="dk-arrow" aria-label="Rolar para trás" onClick={() => scroll(-1)}>‹</button>
+          <div className="dv-strip" ref={stripRef}>
+            {deck.cards.map(e => (
+              <figure className="dv-card" key={e.card.id}>
+                <img src={cardImg(e.card)} alt={e.card.name} loading="lazy" />
+                <span className="dv-count">×{e.count}</span>
+                <figcaption>{e.card.name}</figcaption>
+              </figure>
+            ))}
+          </div>
+          <button type="button" className="dk-arrow" aria-label="Rolar para frente" onClick={() => scroll(1)}>›</button>
+        </div>
+        <div className="dv-list">
+          {groups.map(([cat, label]) => {
+            const rows = deck.cards
+              .map((e, i) => ({ ...e, i }))
+              .filter(e => e.card.category === cat)
+            if (rows.length === 0) return null
+            const total = rows.reduce((s, e) => s + e.count, 0)
+            return (
+              <section key={cat} className="dv-group">
+                <h3>{label} <span>{total}</span></h3>
+                <ul>
+                  {rows.map(e => (
+                    <li key={e.card.id}>
+                      <button type="button" onClick={() => goTo(e.i)}>
+                        <b>{e.count}×</b> {e.card.name}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )
+          })}
+        </div>
+      </div>
     </div>
   )
 }
 
 function LobbyScreen({ onStart, err }: { onStart: (c: GameConfig) => void; err: string }) {
-  const [mytype, setMytype] = useState('Fire')
-  const [bottype, setBottype] = useState('Water')
+  const [decks, setDecks] = useState<DeckInfo[] | null>(null)
+  const [loadErr, setLoadErr] = useState('')
+  const [myId, setMyId] = useState('')
+  const [botId, setBotId] = useState('')
+  const [viewer, setViewer] = useState<DeckInfo | null>(null)
+
+  useEffect(() => {
+    fetchDecks().then(ds => {
+      setDecks(ds)
+      const at = (t: string) => ds.find(d => d.type === t)?.id ?? ds[0]?.id ?? ''
+      setMyId(at('Fire'))
+      setBotId(at('Water'))
+    }).catch(e => setLoadErr(String(e)))
+  }, [])
+
   return (
     <div id="lobby">
       <div className="lobby-box">
         <div className="lobby-head">
           <div className="lobby-title">Pokémon TCG</div>
-          <div className="lobby-sub">Escolha os tipos de energia dos dois decks</div>
+          <div className="lobby-sub">Escolha o Battle Deck de cada lado</div>
         </div>
-        <div className="lobby-sides">
-          <section className="lobby-side you">
-            <h2>Você</h2>
-            <TypePicker value={mytype} onChange={setMytype} />
-          </section>
-          <div className="lobby-vs" aria-hidden="true">vs</div>
-          <section className="lobby-side bot">
-            <h2>Bot</h2>
-            <TypePicker value={bottype} onChange={setBottype} />
-          </section>
-        </div>
+        {!decks && <div className="lobby-sub">{loadErr || 'Carregando decks…'}</div>}
+        {decks && (
+          <div className="lobby-sides">
+            <DeckMenu decks={decks} sel={myId} setSel={setMyId} who="you" onView={setViewer} />
+            <div className="lobby-vs" aria-hidden="true">vs</div>
+            <DeckMenu decks={decks} sel={botId} setSel={setBotId} who="bot" onView={setViewer} />
+          </div>
+        )}
         {err && <div className="lobby-err">{err}</div>}
-        <button className="primary lobby-start" onClick={() => onStart({ mytype, bottype })}>
+        <button className="primary lobby-start" disabled={!decks}
+          onClick={() => decks && onStart({ mytype: myId, bottype: botId })}>
           Iniciar partida
         </button>
       </div>
+      {viewer && <DeckViewer deck={viewer} onClose={() => setViewer(null)} />}
     </div>
   )
 }
@@ -197,24 +343,30 @@ function ChoiceOverlay({ pc, post }: {
   pc: NonNullable<GameState['pendingChoice']>
   post: (body: Record<string, unknown>) => void
 }) {
+  const boxRef = useRef<HTMLDivElement>(null)
+  useFocusTrap(boxRef)
   const [picks, setPicks] = useState<number[]>([])
   const toggle = (i: number) => setPicks(cur =>
     cur.includes(i) ? cur.filter(x => x !== i)
       : cur.length < pc.max ? [...cur, i] : cur)
 
   const isSwitch = pc.kind === 'switch_self' || pc.kind === 'switch_opp'
+  const isDiscard = pc.kind === 'discard_hand'
   const title = pc.kind === 'switch_self'
     ? 'Escolha 1 Pokémon do Banco para trocar com o Ativo'
     : pc.kind === 'switch_opp'
       ? 'Escolha 1 Pokémon do Banco do oponente para virar Ativo'
-      : `Busca no deck: escolha até ${pc.max} carta${pc.max > 1 ? 's' : ''} ${pc.dest === 'bench' ? 'para o Banco' : 'para a mão'}`
+      : isDiscard
+        ? `Descarte ${pc.min} carta${pc.min > 1 ? 's' : ''} da mão`
+        : `Busca no deck: escolha até ${pc.max} carta${pc.max > 1 ? 's' : ''} ${pc.dest === 'bench' ? 'para o Banco' : 'para a mão'}`
 
   const confirm = () => post({ action: 'resolve_choice', picks })
   const skip = () => post({ action: 'resolve_choice', picks: [] })
+  const needMore = picks.length < (pc.min ?? 0)
 
   return (
     <div className="choice-overlay">
-      <div className="winner-box choice-box">
+      <div className="winner-box choice-box" role="dialog" aria-modal="true" aria-label={title} ref={boxRef}>
         <div className="choice-title">{title}</div>
         <div className="choice-cards">
           {pc.candidates.map((c, i) => (
@@ -222,10 +374,10 @@ function ChoiceOverlay({ pc, post }: {
           ))}
         </div>
         <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
-          <button className="primary" onClick={confirm}>
+          <button className="primary" onClick={confirm} disabled={needMore}>
             {isSwitch ? 'Confirmar' : `Confirmar (${picks.length})`}
           </button>
-          {!isSwitch && (
+          {!isSwitch && !isDiscard && (
             <button onClick={skip}>Não pegar nada</button>
           )}
         </div>
@@ -235,15 +387,17 @@ function ChoiceOverlay({ pc, post }: {
 }
 
 function WinnerOverlay({ winner, onReplay, onNew }: { winner: number; onReplay: () => void; onNew: () => void }) {
+  const ref = useRef<HTMLDivElement>(null)
+  useFocusTrap(ref, winner >= 0 || winner === -2)
   if (winner < 0 && winner !== -2) return null
   const txt = winner === -2 ? 'Sudden Death!' : winner === 0 ? 'Você venceu!' : 'Bot venceu.'
   return (
-    <div id="winner">
-      <div className="winner-box">
+    <div id="winner" role="dialog" aria-modal="true" aria-label={txt}>
+      <div className="winner-box" ref={ref}>
         <div className="winner-txt">{txt}</div>
         <div style={{ display:'flex', gap:8, justifyContent:'center' }}>
-          <button className="primary" onClick={onReplay}>Repetir</button>
-          <button onClick={onNew}>Nova partida</button>
+          <button type="button" className="primary" onClick={onReplay}>Repetir</button>
+          <button type="button" onClick={onNew}>Nova partida</button>
         </div>
       </div>
     </div>
@@ -363,7 +517,7 @@ export default function App() {
         </div>
         <HudRail s={s} pane={pane} setPane={setPane} endTurn={() => post({ action: 'end_turn' })} />
         <Toasts s={s} err={err} errN={errN} />
-        <Drawer pane={pane} s={s} post={post} />
+        <Drawer pane={pane} s={s} post={post} onExit={() => { setPane(''); setS(null) }} />
         <CardPreview p={preview} />
         {s.pendingChoice && <ChoiceOverlay key={s.log?.length} pc={s.pendingChoice} post={post} />}
         <WinnerOverlay

@@ -12,6 +12,7 @@ import (
 	"io/fs"
 	"log"
 	"net/http"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -56,9 +57,51 @@ func main() {
 	http.HandleFunc("/api/state", safeHandler(s.handleState))
 	http.HandleFunc("/api/action", safeHandler(s.handleAction))
 	http.HandleFunc("/api/new", safeHandler(s.handleNew))
+	http.HandleFunc("/api/decks", safeHandler(s.handleDecks))
 
 	log.Printf("em http://%s", *addr)
 	log.Fatal(http.ListenAndServe(*addr, nil))
+}
+
+// handleDecks lista os Battle Decks para a tela de seleção: capa (carta-estrela),
+// contagens por categoria e a decklist completa com imagem de cada carta.
+func (s *server) handleDecks(w http.ResponseWriter, r *http.Request) {
+	var out []map[string]any
+	for _, info := range bot.BattleDecks() {
+		d, err := bot.BattleDeck(s.store, info.ID)
+		if err != nil {
+			continue
+		}
+		counts := map[string]int{}
+		type row struct {
+			c *cards.Card
+			n int
+		}
+		var rows []row
+		for id, n := range d.Counts {
+			c := s.store.Cards[id]
+			counts[string(c.Category)] += n
+			rows = append(rows, row{c, n})
+		}
+		// Pokémon primeiro, depois Treinadores, Energias por último; ID desempata.
+		catOrder := map[cards.Category]int{cards.CategoryPokemon: 0, cards.CategoryTrainer: 1, cards.CategoryEnergy: 2}
+		sort.Slice(rows, func(i, j int) bool {
+			if a, b := catOrder[rows[i].c.Category], catOrder[rows[j].c.Category]; a != b {
+				return a < b
+			}
+			return rows[i].c.ID < rows[j].c.ID
+		})
+		var list []map[string]any
+		for _, r := range rows {
+			list = append(list, map[string]any{"card": cardJSON(r.c), "count": r.n})
+		}
+		out = append(out, map[string]any{
+			"id": info.ID, "type": info.Type, "name": info.Name,
+			"star": cardJSON(s.store.Cards[info.Star]),
+			"counts": counts, "cards": list,
+		})
+	}
+	writeJSON(w, out)
 }
 
 func (s *server) handleNew(w http.ResponseWriter, r *http.Request) {
@@ -113,10 +156,18 @@ func (s *server) handleNew(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, s.stateJSON())
 }
 
-func buildDeck(store *cards.Store, typ string, seed int64) (*deck.Deck, error) {
-	typ = strings.ToLower(typ)
+// buildDeck resolve a escolha do lobby: ID de Battle Deck ("grass-venusaur"),
+// tipo ("Fire" → primeiro Battle Deck do tipo) ou fallback heurístico do pool.
+func buildDeck(store *cards.Store, key string, seed int64) (*deck.Deck, error) {
+	if d, err := bot.BattleDeck(store, key); err == nil {
+		return d, nil
+	}
+	typ := strings.ToLower(key)
 	if typ != "" {
 		typ = strings.ToUpper(typ[:1]) + typ[1:]
+	}
+	if d, err := bot.BattleDeck(store, typ); err == nil {
+		return d, nil
 	}
 	return bot.BuildDeck(store, []string{typ}, seed)
 }
@@ -287,7 +338,10 @@ func safeHandler(fn http.HandlerFunc) http.HandlerFunc {
 // ---- visão do estado (esconde mão/deck/prêmios do bot) ----
 
 func (s *server) cardView(id string) map[string]any {
-	c := s.g.Card(id)
+	return cardJSON(s.g.Card(id))
+}
+
+func cardJSON(c *cards.Card) map[string]any {
 	if c == nil {
 		return nil
 	}
@@ -397,13 +451,17 @@ func (s *server) stateJSON() map[string]any {
 			for _, benchIdx := range pc.Candidates {
 				cand = append(cand, s.pokemonView(g.Players[botP].Bench[benchIdx]))
 			}
+		case game.ChoiceDiscardHand:
+			for _, hi := range pc.Candidates {
+				cand = append(cand, s.cardView(g.Players[human].Hand[hi]))
+			}
 		default: // ChoiceSearch
 			for _, di := range pc.Candidates {
 				cand = append(cand, s.cardView(g.Players[human].Deck[di]))
 			}
 		}
 		v["pendingChoice"] = map[string]any{
-			"kind": pc.Kind, "max": pc.Max, "dest": pc.Dest, "candidates": cand,
+			"kind": pc.Kind, "max": pc.Max, "min": pc.Min, "dest": pc.Dest, "candidates": cand,
 		}
 	}
 	return v
