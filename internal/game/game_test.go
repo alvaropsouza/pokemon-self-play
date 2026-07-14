@@ -107,6 +107,29 @@ func TestSetupDealsPrizesAndFirstDraw(t *testing.T) {
 	}
 }
 
+// Regressão: mão/prêmios eram fatias do array do deck; ganhos diretos à mão
+// (pegar prêmio, busca) sobrescreviam cartas vivas do deck e dos prêmios.
+func TestNoZoneAliasingOnHandGrowth(t *testing.T) {
+	g := newTestGame(t)
+	ps := g.Players[0]
+	deck := append([]string(nil), ps.Deck...)
+	prizes := append([]string(nil), ps.Prizes...)
+	// Simula ganhos à mão sem compra (mesmo append de TakePrize/busca).
+	for i := 0; i < 10; i++ {
+		ps.Hand = append(ps.Hand, "t-item")
+	}
+	for i, id := range ps.Deck {
+		if id != deck[i] {
+			t.Fatalf("deck corrompido em %d: %q → %q", i, deck[i], id)
+		}
+	}
+	for i, id := range ps.Prizes {
+		if id != prizes[i] {
+			t.Fatalf("prêmios corrompidos em %d: %q → %q", i, prizes[i], id)
+		}
+	}
+}
+
 func TestFirstTurnRestrictions(t *testing.T) {
 	g := newTestGame(t)
 	// Liga energia pra pagar custo e tenta atacar no turno 1.

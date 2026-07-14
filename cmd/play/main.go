@@ -73,8 +73,9 @@ func (s *server) handleNew(w http.ResponseWriter, r *http.Request) {
 	}
 	req.MyType = "Fire"
 	req.BotType = "Water"
-	req.Seed = 1
 	json.NewDecoder(r.Body).Decode(&req)
+	// Sem seed no request: sorteia (cada partida diferente). Seed explícita
+	// (>0) mantém reprodutibilidade para teste/depuração.
 	if req.Seed <= 0 {
 		req.Seed = time.Now().UnixNano()
 	}

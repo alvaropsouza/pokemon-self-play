@@ -505,7 +505,9 @@ func (g *Game) runOps(p int, ops []Op, attacker *PokemonInPlay) {
 // shuffleHandIntoDeck devolve a mão (e opcionalmente ferramentas) ao deck e embaralha.
 func (g *Game) shuffleHandIntoDeck(p int, includeTools bool) {
 	ps := g.Players[p]
-	ps.Deck = append(ps.Hand, ps.Deck...)
+	// append em slice novo: usar ps.Hand como base escreveria no array da mão,
+	// que pode ser compartilhado com outras zonas.
+	ps.Deck = append(append([]string(nil), ps.Hand...), ps.Deck...)
 	ps.Hand = nil
 	if includeTools {
 		all := append([]*PokemonInPlay{ps.Active}, ps.Bench...)

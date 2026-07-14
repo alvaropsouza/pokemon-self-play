@@ -82,9 +82,11 @@ func TakeTurn(g *game.Game, player int) {
 		}
 	}
 
-	// Suporte: joga o melhor disponível.
+	// Suporte: joga o melhor disponível. Busca pendente do Suporte precisa
+	// ser resolvida já — Pending bloqueia energia/ataque/EndTurn (requireTurn).
 	if !ps.SupporterPlayed {
 		playBestSupporter(g, player)
+		ResolvePending(g, player)
 	}
 
 	// Items úteis: busca de Pokémon/Energia com mão pequena.

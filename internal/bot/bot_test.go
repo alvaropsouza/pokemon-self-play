@@ -1,6 +1,7 @@
 package bot
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/alvaropsouza/pokemon-self-play/internal/cards"
@@ -73,6 +74,17 @@ func TestBotVsBotFullGame(t *testing.T) {
 		if g.Phase != game.PhaseFinished {
 			t.Fatalf("seed %d: partida não terminou em 500 iterações\nlog: %v", seed, g.Log[len(g.Log)-10:])
 		}
-		t.Logf("seed %d: vencedor jogador %d em %d turnos", seed, g.Winner+1, g.TurnNumber)
+		// Regressão: MC com rollouts inconclusivos empatava tudo em zero e o
+		// desempate ficava com "passar" — bot nunca atacava (deck-out sempre).
+		attacks := 0
+		for _, l := range g.Log {
+			if strings.Contains(l, " usa ") {
+				attacks++
+			}
+		}
+		if attacks == 0 {
+			t.Errorf("seed %d: partida inteira sem nenhum ataque", seed)
+		}
+		t.Logf("seed %d: vencedor jogador %d em %d turnos (%d ataques)", seed, g.Winner+1, g.TurnNumber, attacks)
 	}
 }

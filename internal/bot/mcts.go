@@ -31,40 +31,38 @@ func MCPickAttack(g *game.Game, player int) int {
 	c := g.Card(pk.TopID())
 
 	type option struct {
-		atk int // -1 = end turn
-		win int
+		atk   int // -1 = end turn
+		score int
 	}
 
 	var opts []option
-	opts = append(opts, option{atk: -1})
 	for i := range c.Attacks {
 		if g.CostPaid(pk, c.Attacks[i].Cost) {
 			opts = append(opts, option{atk: i})
 		}
 	}
-	if len(opts) == 1 {
-		return -1 // só "passar" disponível
+	if len(opts) == 0 {
+		return -1 // nenhum ataque pago: passar
 	}
+	// "Passar" entra por último: em empate de score (comum quando os rollouts
+	// não alcançam um vencedor), o desempate estrito fica com um ataque.
+	opts = append(opts, option{atk: -1})
 
 	seed := int64(g.TurnNumber)*1000 + int64(player)
 	rng := rand.New(rand.NewSource(seed))
 
 	for i := range opts {
-		wins := 0
 		for sim := 0; sim < MCBudget; sim++ {
 			clone := g.CloneWithSeed(rng.Int63())
 			applyOption(clone, player, opts[i].atk)
-			if rollout(clone, player, rng.Int63()) {
-				wins++
-			}
+			opts[i].score += rollout(clone, player, rng.Int63())
 		}
-		opts[i].win = wins
 	}
 
-	best, bestWins := -1, -1
+	best, bestScore := -1, -1
 	for _, o := range opts {
-		if o.win > bestWins {
-			bestWins, best = o.win, o.atk
+		if o.score > bestScore {
+			bestScore, best = o.score, o.atk
 		}
 	}
 	return best
@@ -79,9 +77,11 @@ func applyOption(g *game.Game, player, atk int) {
 	}
 }
 
-// rollout joga o jogo do clone até o fim usando heurística mínima (maior dano pago).
-// Retorna true se player venceu.
-func rollout(g *game.Game, player int, seed int64) bool {
+// rollout joga o jogo do clone até maxTurns com heurística mínima e devolve
+// um score para player: 100 = vitória, 0 = derrota; jogo inacabado vale 50
+// ± vantagem de prêmios (sinal parcial — evita que rollouts longos demais
+// zerem todas as opções e o bot nunca ataque).
+func rollout(g *game.Game, player int, seed int64) int {
 	rng := rand.New(rand.NewSource(seed))
 	const maxTurns = 60
 	for i := 0; i < maxTurns && g.Phase == game.PhaseTurn && g.Winner < 0; i++ {
@@ -96,7 +96,13 @@ func rollout(g *game.Game, player int, seed int64) bool {
 		}
 		randomTurn(g, p, rng)
 	}
-	return g.Winner == player
+	switch g.Winner {
+	case player:
+		return 100
+	case 1 - player:
+		return 0
+	}
+	return 50 + 8*(g.Players[player].PrizesTaken-g.Players[1-player].PrizesTaken)
 }
 
 // randomTurn executa um turno com heurística mínima (sem recursão MC).

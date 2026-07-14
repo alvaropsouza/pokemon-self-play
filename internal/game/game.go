@@ -179,7 +179,9 @@ func New(store *cards.Store, decks [2][]string, seed int64, firstPlayer int) (*G
 	for p := 0; p < 2; p++ {
 		ps := g.Players[p]
 		for {
-			ps.Hand = ps.Deck[:7]
+			// Cópia obrigatória: fatiar o deck faria a mão compartilhar o array
+			// e appends futuros na mão (prêmio, busca) corromperiam o deck.
+			ps.Hand = append([]string(nil), ps.Deck[:7]...)
 			ps.Deck = ps.Deck[7:]
 			if g.handHasBasic(ps.Hand) {
 				break
@@ -193,8 +195,11 @@ func New(store *cards.Store, decks [2][]string, seed int64, firstPlayer int) (*G
 	}
 	// Compra extra por mulligan do adversário (aplicada automaticamente).
 	for p := 0; p < 2; p++ {
-		for i := 0; i < g.Players[1-p].Mulligans; i++ {
-			g.drawCard(p)
+		if n := g.Players[1-p].Mulligans; n > 0 {
+			for i := 0; i < n; i++ {
+				g.drawCard(p)
+			}
+			g.logf("jogador %d: +%d carta(s) por mulligan do oponente (mão: %d)", p+1, n, len(g.Players[p].Hand))
 		}
 	}
 	return g, nil
@@ -361,7 +366,8 @@ func (g *Game) FinishSetup(p int) error {
 	}
 	for i := 0; i < 2; i++ {
 		s := g.Players[i]
-		s.Prizes = s.Deck[:6]
+		// Cópia obrigatória (mesmo motivo da mão inicial: sem aliasing com o deck).
+		s.Prizes = append([]string(nil), s.Deck[:6]...)
 		s.Deck = s.Deck[6:]
 	}
 	g.Phase = PhaseTurn
