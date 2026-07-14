@@ -5,11 +5,10 @@ import (
 	"github.com/alvaropsouza/pokemon-self-play/internal/game"
 )
 
-// Setup faz a colocação inicial do bot: melhor básico como Ativo (maior HP),
-// até 2 básicos no banco.
 func Setup(g *game.Game, player int) error {
 	if idx := bestBasicInHand(g, player); idx >= 0 {
-		if err := g.PlaceActive(player, idx); err != nil {
+		cmd := game.PlaceActiveCmd{Player: player, HandIdx: idx}
+		if err := cmd.Execute(g); err != nil {
 			return err
 		}
 	}
@@ -18,14 +17,13 @@ func Setup(g *game.Game, player int) error {
 		if idx < 0 {
 			break
 		}
-		if err := g.PlaceBench(player, idx); err != nil {
+		if err := (game.PlaceBenchCmd{Player: player, HandIdx: idx}).Execute(g); err != nil {
 			break
 		}
 	}
-	return g.FinishSetup(player)
+	return game.FinishSetupCmd{Player: player}.Execute(g)
 }
 
-// PromoteIfNeeded resolve promoção pendente: Pokémon com mais HP restante.
 func PromoteIfNeeded(g *game.Game, player int) {
 	if !g.NeedPromote[player] {
 		return
@@ -38,11 +36,9 @@ func PromoteIfNeeded(g *game.Game, player int) {
 			best, bestHP = i, hp
 		}
 	}
-	_ = g.Promote(player, best)
+	_ = game.PromoteCmd{Player: player, BenchIdx: best}.Execute(g)
 }
 
-// ResolvePending resolve busca pendente do bot: pega o máximo, na ordem dos
-// candidatos (heurística mínima).
 func ResolvePending(g *game.Game, player int) {
 	pc := g.Pending
 	if pc == nil || pc.Player != player {
@@ -53,10 +49,9 @@ func ResolvePending(g *game.Game, player int) {
 	for i := range picks {
 		picks[i] = i
 	}
-	_ = g.ResolveChoice(player, picks)
+	_ = game.ResolveChoiceCmd{Player: player, Picks: picks}.Execute(g)
 }
 
-// TakeTurn executa o turno completo do bot (após a compra automática do motor).
 func TakeTurn(g *game.Game, player int) {
 	PromoteIfNeeded(g, player)
 	ResolvePending(g, player)
@@ -65,52 +60,48 @@ func TakeTurn(g *game.Game, player int) {
 	}
 	ps := g.Players[player]
 
-	// Banco: baixa básicos até ter 3 Pokémon de reserva.
 	for len(ps.Bench) < 3 {
 		idx := bestBasicInHand(g, player)
-		if idx < 0 || g.PlaceBench(player, idx) != nil {
+		if idx < 0 {
+			break
+		}
+		if (game.PlaceBenchCmd{Player: player, HandIdx: idx}).Execute(g) != nil {
 			break
 		}
 	}
 
-	// Evolui tudo que puder (Ativo primeiro).
 	for _, slot := range slots(g, player) {
 		for i := 0; i < len(ps.Hand); i++ {
-			if g.Evolve(player, i, slot) == nil {
+			if (game.EvolveCmd{Player: player, HandIdx: i, Slot: slot}).Execute(g) == nil {
 				break
 			}
 		}
 	}
 
-	// Suporte: joga o melhor disponível. Busca pendente do Suporte precisa
-	// ser resolvida já — Pending bloqueia energia/ataque/EndTurn (requireTurn).
 	if !ps.SupporterPlayed {
 		playBestSupporter(g, player)
 		ResolvePending(g, player)
 	}
 
-	// Items úteis: busca de Pokémon/Energia com mão pequena.
 	playUsefulItems(g, player)
 
-	// Energia: no Ativo se o melhor ataque dele ainda não está pago; senão no banco.
 	if idx := energyInHand(g, player); idx >= 0 {
 		target := game.ActiveSlot
 		if ps.Active != nil && bestAttack(g, player, ps.Active) >= 0 && len(ps.Bench) > 0 {
 			target = 0
 		}
-		_ = g.AttachEnergy(player, idx, target)
+		_ = game.AttachEnergyCmd{Player: player, HandIdx: idx, Slot: target}.Execute(g)
 	}
 
-	// Ataca: MC search para escolher melhor ataque (ou passar).
 	if ps.Active != nil {
 		atk := MCPickAttack(g, player)
 		if atk >= 0 {
-			if g.Attack(player, atk) == nil {
+			if (game.AttackCmd{Player: player, AtkIdx: atk}).Execute(g) == nil {
 				return
 			}
 		}
 	}
-	_ = g.EndTurn(player)
+	_ = game.EndTurnCmd{Player: player}.Execute(g)
 }
 
 func slots(g *game.Game, player int) []int {
@@ -141,9 +132,6 @@ func energyInHand(g *game.Game, player int) int {
 	return -1
 }
 
-
-// supporterScore atribui um valor heurístico a um Supporter com base nos ops compilados.
-// Maior = mais valioso agora. Zero = não jogar.
 func supporterScore(g *game.Game, player int, ops []game.Op) int {
 	ps := g.Players[player]
 	score := 0
@@ -155,7 +143,6 @@ func supporterScore(g *game.Game, player int, ops []game.Op) int {
 		case game.OpSearch:
 			score += 20
 		case game.OpSwitchOpp:
-			// Vantajoso se o Ativo do oponente tem pouco HP restante.
 			opp := g.Players[1-player]
 			if opp.Active != nil {
 				c := g.Card(opp.Active.TopID())
@@ -172,7 +159,6 @@ func supporterScore(g *game.Game, player int, ops []game.Op) int {
 			}
 		}
 	}
-	// Não jogar Supporter com mão cheia a menos que ele embaralhe a mão.
 	if len(ps.Hand) > 5 {
 		hasRefresh := false
 		for _, op := range ops {
@@ -187,7 +173,6 @@ func supporterScore(g *game.Game, player int, ops []game.Op) int {
 	return score
 }
 
-// playBestSupporter escolhe e joga o Supporter de maior valor heurístico.
 func playBestSupporter(g *game.Game, player int) {
 	ps := g.Players[player]
 	bestIdx, bestScore := -1, 0
@@ -205,11 +190,10 @@ func playBestSupporter(g *game.Game, player int) {
 		}
 	}
 	if bestIdx >= 0 {
-		_ = g.PlaySupporter(player, bestIdx)
+		_ = game.PlaySupporterCmd{Player: player, HandIdx: bestIdx}.Execute(g)
 	}
 }
 
-// playUsefulItems joga Items de busca (search) quando mão está pequena.
 func playUsefulItems(g *game.Game, player int) {
 	ps := g.Players[player]
 	if len(ps.Hand) > 4 {
@@ -226,9 +210,9 @@ func playUsefulItems(g *game.Game, player int) {
 		}
 		for _, op := range ce.Ops {
 			if op.Kind == game.OpSearch {
-				if g.PlayItem(player, i) == nil {
+				if (game.PlayItemCmd{Player: player, HandIdx: i}).Execute(g) == nil {
 					ResolvePending(g, player)
-					i-- // índice deslocou após remoção
+					i--
 				}
 				break
 			}
@@ -236,7 +220,6 @@ func playUsefulItems(g *game.Game, player int) {
 	}
 }
 
-// attackScore estima o valor de um ataque considerando dano + efeitos compilados.
 func attackScore(g *game.Game, player int, pk *game.PokemonInPlay, atkIdx int) int {
 	c := g.Card(pk.TopID())
 	atk := c.Attacks[atkIdx]
@@ -249,7 +232,7 @@ func attackScore(g *game.Game, player int, pk *game.PokemonInPlay, atkIdx int) i
 		switch op.Kind {
 		case game.OpStatus:
 			if !op.OnSelf {
-				score += 15 // condição no oponente vale algo
+				score += 15
 			}
 		case game.OpDamageOppBench:
 			score += op.N * len(g.Players[1-player].Bench) / 2
@@ -258,7 +241,7 @@ func attackScore(g *game.Game, player int, pk *game.PokemonInPlay, atkIdx int) i
 			if opp.Active != nil {
 				remaining := g.Card(opp.Active.TopID()).HP - opp.Active.Damage
 				if remaining > 60 {
-					score += 10 // trazer alvo mais fraco
+					score += 10
 				}
 			}
 		case game.OpHealSelf:
@@ -268,7 +251,6 @@ func attackScore(g *game.Game, player int, pk *game.PokemonInPlay, atkIdx int) i
 	return score
 }
 
-// bestAttack devolve o índice do ataque com maior score, ou -1 se nenhum pago.
 func bestAttack(g *game.Game, player int, pk *game.PokemonInPlay) int {
 	best, bestScore := -1, -1
 	c := g.Card(pk.TopID())

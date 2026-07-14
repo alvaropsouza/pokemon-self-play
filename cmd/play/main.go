@@ -1,8 +1,3 @@
-// cmd/play sobe a interface web da partida contra o bot (PLANO.md etapa 2).
-// Os dois decks são gerados do pool por tipo; o humano é o jogador 1 (índice 0)
-// e joga pelo navegador; o bot joga automaticamente no turno dele.
-//
-//	go run ./cmd/play -mytype Fire -bottype Water -seed 7
 package main
 
 import (
@@ -63,8 +58,6 @@ func main() {
 	log.Fatal(http.ListenAndServe(*addr, nil))
 }
 
-// handleDecks lista os Battle Decks para a tela de seleção: capa (carta-estrela),
-// contagens por categoria e a decklist completa com imagem de cada carta.
 func (s *server) handleDecks(w http.ResponseWriter, r *http.Request) {
 	var out []map[string]any
 	for _, info := range bot.BattleDecks() {
@@ -83,7 +76,6 @@ func (s *server) handleDecks(w http.ResponseWriter, r *http.Request) {
 			counts[string(c.Category)] += n
 			rows = append(rows, row{c, n})
 		}
-		// Pokémon primeiro, depois Treinadores, Energias por último; ID desempata.
 		catOrder := map[cards.Category]int{cards.CategoryPokemon: 0, cards.CategoryTrainer: 1, cards.CategoryEnergy: 2}
 		sort.Slice(rows, func(i, j int) bool {
 			if a, b := catOrder[rows[i].c.Category], catOrder[rows[j].c.Category]; a != b {
@@ -117,8 +109,6 @@ func (s *server) handleNew(w http.ResponseWriter, r *http.Request) {
 	req.MyType = "Fire"
 	req.BotType = "Water"
 	json.NewDecoder(r.Body).Decode(&req)
-	// Sem seed no request: sorteia (cada partida diferente). Seed explícita
-	// (>0) mantém reprodutibilidade para teste/depuração.
 	if req.Seed <= 0 {
 		req.Seed = time.Now().UnixNano()
 	}
@@ -156,8 +146,6 @@ func (s *server) handleNew(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, s.stateJSON())
 }
 
-// buildDeck resolve a escolha do lobby: ID de Battle Deck ("grass-venusaur"),
-// tipo ("Fire" → primeiro Battle Deck do tipo) ou fallback heurístico do pool.
 func buildDeck(store *cards.Store, key string, seed int64) (*deck.Deck, error) {
 	if d, err := bot.BattleDeck(store, key); err == nil {
 		return d, nil
@@ -172,16 +160,15 @@ func buildDeck(store *cards.Store, key string, seed int64) (*deck.Deck, error) {
 	return bot.BuildDeck(store, []string{typ}, seed)
 }
 
-// advance faz o bot agir sempre que for a vez dele (promoção e turno completo).
 func (s *server) advance() {
 	for s.g.Phase == game.PhaseTurn {
 		bot.PromoteIfNeeded(s.g, botP)
 		if s.g.NeedPromote[human] {
-			return // aguarda o humano promover
+			return
 		}
 		if pc := s.g.Pending; pc != nil {
 			if pc.Player == human {
-				return // aguarda o humano escolher
+				return
 			}
 			bot.ResolvePending(s.g, botP)
 		}
@@ -193,18 +180,43 @@ func (s *server) advance() {
 }
 
 type actionReq struct {
-	Action   string `json:"action"`
-	Hand     int    `json:"hand"`
-	Slot     int    `json:"slot"`
-	Bench    int    `json:"bench"`
-	Attack   int    `json:"attack"`
-	Energies []int  `json:"energies"`
-	// Campos de arbitragem manual.
+	Action    string `json:"action"`
+	Hand      int    `json:"hand"`
+	Slot      int    `json:"slot"`
+	Bench     int    `json:"bench"`
+	Attack    int    `json:"attack"`
+	Energies  []int  `json:"energies"`
 	Player    int    `json:"player"`
 	Amount    int    `json:"amount"`
 	Condition string `json:"condition"`
-	// Picks: posições escolhidas na lista de candidatos da busca pendente.
-	Picks []int `json:"picks"`
+	Picks     []int  `json:"picks"`
+}
+
+func parseCommand(defaultPlayer int, req actionReq) (game.Command, error) {
+	p := defaultPlayer
+	switch req.Action {
+	case "place_active":   return game.PlaceActiveCmd{Player: p, HandIdx: req.Hand}, nil
+	case "place_bench":    return game.PlaceBenchCmd{Player: p, HandIdx: req.Hand}, nil
+	case "finish_setup":   return game.FinishSetupCmd{Player: p}, nil
+	case "attach_energy":  return game.AttachEnergyCmd{Player: p, HandIdx: req.Hand, Slot: req.Slot}, nil
+	case "evolve":         return game.EvolveCmd{Player: p, HandIdx: req.Hand, Slot: req.Slot}, nil
+	case "attach_tool":    return game.AttachToolCmd{Player: p, HandIdx: req.Hand, Slot: req.Slot}, nil
+	case "play_item":      return game.PlayItemCmd{Player: p, HandIdx: req.Hand}, nil
+	case "play_supporter": return game.PlaySupporterCmd{Player: p, HandIdx: req.Hand}, nil
+	case "play_stadium":   return game.PlayStadiumCmd{Player: p, HandIdx: req.Hand}, nil
+	case "retreat":        return game.RetreatCmd{Player: p, BenchIdx: req.Bench, Energies: req.Energies}, nil
+	case "attack":         return game.AttackCmd{Player: p, AtkIdx: req.Attack}, nil
+	case "promote":        return game.PromoteCmd{Player: p, BenchIdx: req.Bench}, nil
+	case "end_turn":       return game.EndTurnCmd{Player: p}, nil
+	case "resolve_choice": return game.ResolveChoiceCmd{Player: p, Picks: req.Picks}, nil
+	case "arb_damage":     return game.ArbDamageCmd{Player: req.Player, Slot: req.Slot, Amount: req.Amount}, nil
+	case "arb_heal":       return game.ArbHealCmd{Player: req.Player, Slot: req.Slot, Amount: req.Amount}, nil
+	case "arb_condition":  return game.ArbConditionCmd{Player: req.Player, Condition: req.Condition}, nil
+	case "arb_draw":       return game.ArbDrawCmd{Player: req.Player, Amount: req.Amount}, nil
+	case "arb_switch":     return game.ArbSwitchCmd{Player: req.Player, BenchIdx: req.Bench}, nil
+	case "arb_shuffle":    return game.ArbShuffleCmd{Player: req.Player}, nil
+	default:               return nil, fmt.Errorf("ação desconhecida: %q", req.Action)
+	}
 }
 
 func (s *server) handleAction(w http.ResponseWriter, r *http.Request) {
@@ -226,72 +238,10 @@ func (s *server) handleAction(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	g := s.g
-	var err error
-	switch req.Action {
-	case "place_active":
-		log.Printf("[action] place_active hand=%d", req.Hand)
-		err = g.PlaceActive(human, req.Hand)
-	case "place_bench":
-		log.Printf("[action] place_bench hand=%d", req.Hand)
-		err = g.PlaceBench(human, req.Hand)
-	case "finish_setup":
-		log.Printf("[action] finish_setup")
-		err = g.FinishSetup(human)
-	case "attach_energy":
-		log.Printf("[action] attach_energy hand=%d slot=%d", req.Hand, req.Slot)
-		err = g.AttachEnergy(human, req.Hand, req.Slot)
-	case "evolve":
-		log.Printf("[action] evolve hand=%d slot=%d", req.Hand, req.Slot)
-		err = g.Evolve(human, req.Hand, req.Slot)
-	case "attach_tool":
-		log.Printf("[action] attach_tool hand=%d slot=%d", req.Hand, req.Slot)
-		err = g.AttachTool(human, req.Hand, req.Slot)
-	case "play_item":
-		log.Printf("[action] play_item hand=%d", req.Hand)
-		err = g.PlayItem(human, req.Hand)
-	case "play_supporter":
-		log.Printf("[action] play_supporter hand=%d", req.Hand)
-		err = g.PlaySupporter(human, req.Hand)
-	case "play_stadium":
-		log.Printf("[action] play_stadium hand=%d", req.Hand)
-		err = g.PlayStadium(human, req.Hand)
-	case "retreat":
-		log.Printf("[action] retreat bench=%d energies=%v", req.Bench, req.Energies)
-		err = g.Retreat(human, req.Bench, req.Energies)
-	case "attack":
-		log.Printf("[action] attack idx=%d", req.Attack)
-		err = g.Attack(human, req.Attack)
-	case "promote":
-		log.Printf("[action] promote bench=%d", req.Bench)
-		err = g.Promote(human, req.Bench)
-	case "resolve_choice":
-		log.Printf("[action] resolve_choice picks=%v", req.Picks)
-		err = g.ResolveChoice(human, req.Picks)
-	case "end_turn":
-		log.Printf("[action] end_turn turno=%d", g.TurnNumber)
-		err = g.EndTurn(human)
-	case "arb_damage":
-		log.Printf("[arb] damage player=%d slot=%d amount=%d", req.Player, req.Slot, req.Amount)
-		err = g.ApplyDamage(req.Player, req.Slot, req.Amount)
-	case "arb_heal":
-		log.Printf("[arb] heal player=%d slot=%d amount=%d", req.Player, req.Slot, req.Amount)
-		err = g.Heal(req.Player, req.Slot, req.Amount)
-	case "arb_condition":
-		log.Printf("[arb] condition player=%d condition=%q", req.Player, req.Condition)
-		err = g.SetCondition(req.Player, req.Condition)
-	case "arb_draw":
-		log.Printf("[arb] draw player=%d amount=%d", req.Player, req.Amount)
-		g.DrawCards(req.Player, req.Amount)
-	case "arb_switch":
-		log.Printf("[arb] switch player=%d bench=%d", req.Player, req.Bench)
-		err = g.SwitchActive(req.Player, req.Bench)
-	case "arb_shuffle":
-		log.Printf("[arb] shuffle player=%d", req.Player)
-		g.ShuffleDeck(req.Player)
-	default:
-		err = fmt.Errorf("ação desconhecida: %q", req.Action)
-		log.Printf("[action] %v", err)
+	cmd, err := parseCommand(human, req)
+	if err == nil {
+		log.Printf("[action] %s", req.Action)
+		err = cmd.Execute(s.g)
 	}
 	s.advance()
 
@@ -320,7 +270,6 @@ func writeJSON(w http.ResponseWriter, v any) {
 	}
 }
 
-// safeHandler envolve um handler com recover: panics viram respostas JSON de erro.
 func safeHandler(fn http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		defer func() {
@@ -334,8 +283,6 @@ func safeHandler(fn http.HandlerFunc) http.HandlerFunc {
 		fn(w, r)
 	}
 }
-
-// ---- visão do estado (esconde mão/deck/prêmios do bot) ----
 
 func (s *server) cardView(id string) map[string]any {
 	return cardJSON(s.g.Card(id))
@@ -455,7 +402,7 @@ func (s *server) stateJSON() map[string]any {
 			for _, hi := range pc.Candidates {
 				cand = append(cand, s.cardView(g.Players[human].Hand[hi]))
 			}
-		default: // ChoiceSearch
+		default:
 			for _, di := range pc.Candidates {
 				cand = append(cand, s.cardView(g.Players[human].Deck[di]))
 			}
