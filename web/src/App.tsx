@@ -1,5 +1,7 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from 'react'
 import { fetchState, postAction, postNew, type CardView, type GameConfig, type GameState, type Sel } from './api'
+import { energyColor } from './energy'
+import { cancelFlights, flyFromDeck } from './drawfx'
 import { CardPreview, PreviewCtx, type Preview } from './preview'
 import { Sidebar } from './components/Sidebar'
 import { BotMat, YouMat } from './components/Mat'
@@ -14,8 +16,40 @@ function HandTray({ s, sel, onSelect }: {
 }) {
   const hand = s.you.hand ?? []
   const mid = (hand.length - 1) / 2
+  const trayRef = useRef<HTMLDivElement>(null)
+  const prev = useRef({ len: hand.length, deck: s.you.deck, rects: [] as DOMRect[] })
+
+  // Compra detectada (mão cresceu): cartas novas voam do baralho (drawfx);
+  // as existentes deslizam para a nova posição do leque (FLIP). Tudo medido
+  // antes de qualquer animação começar para os rects serem os de layout puro.
+  useLayoutEffect(() => {
+    const boxes = Array.from(trayRef.current?.querySelectorAll<HTMLElement>('.cardbox') ?? [])
+    const rects = boxes.map(el => el.getBoundingClientRect())
+    const p = prev.current
+    const grew = hand.length > p.len
+    if (grew && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      cancelFlights()
+      boxes.slice(0, p.len).forEach((el, i) => {
+        const r = p.rects[i]
+        if (!r) return
+        const ddx = r.left - rects[i].left
+        const ddy = r.top - rects[i].top
+        if (Math.abs(ddx) + Math.abs(ddy) > 1) el.animate(
+          [{ transform: `translate(${ddx}px, ${ddy}px)` }, { transform: 'none' }],
+          { duration: 250, easing: 'cubic-bezier(0.22,1,0.36,1)' })
+      })
+      const fromDeck = s.you.deck < p.deck
+      boxes.slice(p.len).forEach((el, j) => {
+        const i = p.len + j
+        if (fromDeck) flyFromDeck(el, rects[i], (i - mid) * 2, j * 80)
+        else el.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 200 })
+      })
+    }
+    prev.current = { len: hand.length, deck: s.you.deck, rects }
+  })
+
   return (
-    <div id="handtray">
+    <div id="handtray" ref={trayRef}>
       {hand.length === 0 && <span className="empty-hand">Mão vazia</span>}
       {hand.map((c, i) => {
         // leque: rotação/queda proporcionais à distância do centro da mão
@@ -60,7 +94,26 @@ function RightRail({ pane, setPane, endTurn }: {
   )
 }
 
-const TYPES = ['Grass','Fire','Water','Lightning','Psychic','Fighting','Darkness','Metal','Dragon','Colorless']
+const TYPES: [string, string][] = [
+  ['Grass', 'Planta'], ['Fire', 'Fogo'], ['Water', 'Água'], ['Lightning', 'Elétrico'],
+  ['Psychic', 'Psíquico'], ['Fighting', 'Lutador'], ['Darkness', 'Escuridão'],
+  ['Metal', 'Metal'], ['Dragon', 'Dragão'], ['Colorless', 'Incolor'],
+]
+
+function TypePicker({ value, onChange }: { value: string; onChange: (t: string) => void }) {
+  return (
+    <div className="typegrid">
+      {TYPES.map(([en, pt]) => (
+        <button key={en} type="button"
+          className={'typechip' + (value === en ? ' on' : '')}
+          style={{ '--el': energyColor(en) } as CSSProperties}
+          onClick={() => onChange(en)}>
+          <span className="edot" style={{ background: energyColor(en) }} />{pt}
+        </button>
+      ))}
+    </div>
+  )
+}
 
 function LobbyScreen({ onStart, err }: { onStart: (c: GameConfig) => void; err: string }) {
   const [mytype, setMytype] = useState('Fire')
@@ -68,21 +121,23 @@ function LobbyScreen({ onStart, err }: { onStart: (c: GameConfig) => void; err: 
   return (
     <div id="lobby">
       <div className="lobby-box">
-        <div className="lobby-title">Pokémon TCG</div>
-        <div className="lobby-row">
-          <label>Seu tipo</label>
-          <select value={mytype} onChange={e => setMytype(e.target.value)}>
-            {TYPES.map(t => <option key={t}>{t}</option>)}
-          </select>
+        <div className="lobby-head">
+          <div className="lobby-title">Pokémon TCG</div>
+          <div className="lobby-sub">Escolha os tipos de energia dos dois decks</div>
         </div>
-        <div className="lobby-row">
-          <label>Tipo do bot</label>
-          <select value={bottype} onChange={e => setBottype(e.target.value)}>
-            {TYPES.map(t => <option key={t}>{t}</option>)}
-          </select>
+        <div className="lobby-sides">
+          <section className="lobby-side you">
+            <h2>Você</h2>
+            <TypePicker value={mytype} onChange={setMytype} />
+          </section>
+          <div className="lobby-vs" aria-hidden="true">vs</div>
+          <section className="lobby-side bot">
+            <h2>Bot</h2>
+            <TypePicker value={bottype} onChange={setBottype} />
+          </section>
         </div>
         {err && <div className="lobby-err">{err}</div>}
-        <button className="primary" onClick={() => onStart({ mytype, bottype })}>
+        <button className="primary lobby-start" onClick={() => onStart({ mytype, bottype })}>
           Iniciar partida
         </button>
       </div>

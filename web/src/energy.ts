@@ -25,6 +25,7 @@ export function hiresImage(url: string): string {
 const colors: Record<string, string> = {
   Grass: '#5fa338', Fire: '#d6543f', Water: '#3187c4', Lightning: '#e3b62c',
   Psychic: '#9a5aa8', Fighting: '#b06a3a', Darkness: '#31495c', Metal: '#7e8c99',
+  Dragon: '#b8963e', Colorless: '#a8a49c',
 }
 
 export function energyColor(nameEN: string): string {
