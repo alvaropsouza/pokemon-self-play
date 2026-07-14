@@ -90,14 +90,16 @@ function HudRail({ s, pane, setPane, endTurn }: {
   )
   return (
     <aside id="right">
-      <div className="hud-status">
+      <div className={'hud-status ' + (myTurn ? 'you-turn' : 'bot-turn')}>
         <span className={'vez ' + (myTurn ? 'you' : 'bot')}>{myTurn ? 'SUA VEZ' : 'VEZ DO BOT'}</span>
-        <div className="hud-turnline">Turno {s.turn} · {PHASE_LABEL[s.phase] ?? s.phase}</div>
         <TurnTimer turn={s.turn} current={s.current} />
+        <div className="hud-turnline">Turno {s.turn} · {PHASE_LABEL[s.phase] ?? s.phase}</div>
       </div>
-      {tool('cfg', 'PARTIDA')}
-      {tool('log', 'LOG')}
-      {tool('arb', 'ARBITRAR')}
+      <div className="toolstack">
+        {tool('cfg', 'Partida')}
+        {tool('log', 'Log')}
+        {tool('arb', 'Arbitrar')}
+      </div>
       <div className="spacer" />
       <button id="endturn" onClick={endTurn} disabled={!myTurn || s.phase !== 'turn'}>
         TERMINAR<br />TURNO

@@ -256,18 +256,27 @@ button.primary { background:var(--accent); color:#1a1a1a; font-weight:700; borde
 #handtray .empty-hand { color:var(--dim); padding:0 10px; align-self:center; }
 
 /* ---- painel lateral direito: HUD da partida ---- */
-#right { display:flex; flex-direction:column; gap:10px; }
-/* status da vez: substitui a antiga barra horizontal */
-.hud-status { background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:12px 8px; text-align:center; display:flex; flex-direction:column; align-items:center; gap:6px; }
-.hud-status .timer { font-size:15px; font-weight:700; }
+#right { display:flex; flex-direction:column; gap:12px; }
+/* status da vez: card herói do painel — comete na cor de quem joga */
+.hud-status { background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:14px 8px 12px; text-align:center; display:flex; flex-direction:column; align-items:center; gap:8px; transition:border-color .2s, box-shadow .2s; }
+.hud-status.you-turn { border-color:rgba(245,185,66,.55); box-shadow:0 0 14px rgba(245,185,66,.18); }
+.hud-status.bot-turn { border-color:rgba(95,140,255,.45); box-shadow:0 0 14px rgba(95,140,255,.14); }
+/* timer é o dado vivo do card: grande, tabular, peso máximo */
+.hud-status .timer { font-size:26px; font-weight:800; color:var(--txt); line-height:1; letter-spacing:.5px; }
 .hud-turnline { color:var(--dim); font-size:11px; font-weight:600; }
-.tool { background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:14px 4px; text-align:center; cursor:pointer; color:var(--dim); font-size:10px; font-weight:700; letter-spacing:.5px; }
-.tool:hover, .tool.on { border-color:var(--accent); color:var(--txt); }
-/* TERMINAR TURNO: ação mais importante do turno — fundo sólido, visualmente
-   primária, ancorada no canto inferior direito da tela */
-#endturn { background:var(--danger); border:1px solid var(--danger2); border-radius:14px; padding:16px 4px; color:#fff; font-weight:800; font-size:12px; letter-spacing:.5px; line-height:1.3; }
-#endturn:hover { background:var(--danger2); border-color:var(--danger3); }
-#endturn:disabled { background:#3a2430; border-color:#442833; color:#8a6a72; cursor:default; }
+/* ferramentas: meta-ações — ghost buttons discretos, sem competir com o jogo */
+.toolstack { display:flex; flex-direction:column; gap:4px; }
+.tool { background:transparent; border:1px solid transparent; border-radius:10px; padding:9px 12px; text-align:left; cursor:pointer; color:var(--dim); font-size:12px; font-weight:600; letter-spacing:.3px; transition:background .15s, color .15s, border-color .15s; }
+.tool:hover { background:var(--panel); color:var(--txt); border-color:var(--line); }
+.tool.on { background:var(--panel); color:var(--accent); border-color:rgba(245,185,66,.45); font-weight:700; }
+/* TERMINAR TURNO: ação mais importante do turno — fundo sólido, sem borda,
+   sombra própria quando acionável; ancorada no canto inferior direito */
+#endturn { background:var(--danger); border:none; border-radius:14px; padding:18px 4px; color:#fff; font-weight:800; font-size:13px; letter-spacing:.6px; line-height:1.3;
+           box-shadow:0 4px 12px rgba(192,57,43,.35), inset 0 1px 0 rgba(255,255,255,.14);
+           transition:background .15s, box-shadow .15s, transform .15s; }
+#endturn:hover { background:var(--danger2); transform:translateY(-1px); box-shadow:0 6px 14px rgba(192,57,43,.4), inset 0 1px 0 rgba(255,255,255,.14); }
+#endturn:active { transform:translateY(0); box-shadow:0 2px 8px rgba(192,57,43,.35); }
+#endturn:disabled { background:#3a2430; color:#8a6a72; cursor:default; box-shadow:none; transform:none; }
 #right .spacer { flex:1; }
 
 /* ---- toasts: mensagens temporárias (erros e eventos do jogo) ---- */
@@ -338,7 +347,8 @@ button.primary { background:var(--accent); color:#1a1a1a; font-weight:700; borde
 
 @media (prefers-reduced-motion: reduce) {
   .battlefield .cardbox, .stage .cardbox, .edot, .dmg, .base.picking, #ctxbar, .toast { animation:none; transition:none; }
-  #handtray .card, .hpbar i, .hud-bar i, .prize, .pp, #preview { transition:none; }
+  #handtray .card, .hpbar i, .hud-bar i, .prize, .pp, #preview, .hud-status, .tool, #endturn { transition:none; }
+  #endturn:hover { transform:none; }
 }
 
 /* ---- painel de preview no hover ---- */
