@@ -387,11 +387,22 @@ func (s *server) stateJSON() map[string]any {
 	}
 	if pc := g.Pending; pc != nil && pc.Player == human {
 		var cand []map[string]any
-		for _, di := range pc.Candidates {
-			cand = append(cand, s.cardView(g.Players[human].Deck[di]))
+		switch pc.Kind {
+		case game.ChoiceSwitchSelf:
+			for _, benchIdx := range pc.Candidates {
+				cand = append(cand, s.pokemonView(g.Players[human].Bench[benchIdx]))
+			}
+		case game.ChoiceSwitchOpp:
+			for _, benchIdx := range pc.Candidates {
+				cand = append(cand, s.pokemonView(g.Players[botP].Bench[benchIdx]))
+			}
+		default: // ChoiceSearch
+			for _, di := range pc.Candidates {
+				cand = append(cand, s.cardView(g.Players[human].Deck[di]))
+			}
 		}
 		v["pendingChoice"] = map[string]any{
-			"max": pc.Max, "dest": pc.Dest, "candidates": cand,
+			"kind": pc.Kind, "max": pc.Max, "dest": pc.Dest, "candidates": cand,
 		}
 	}
 	return v

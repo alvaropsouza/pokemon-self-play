@@ -11,6 +11,7 @@ import (
 
 	"github.com/alvaropsouza/pokemon-self-play/internal/cards"
 	"github.com/alvaropsouza/pokemon-self-play/internal/deck"
+	"github.com/alvaropsouza/pokemon-self-play/internal/game"
 )
 
 const (
@@ -142,7 +143,7 @@ func BuildDeck(store *cards.Store, types []string, seed int64) (*deck.Deck, erro
 	// Trainers: fill remaining slots (~34)
 	remaining := 60 - d.Size()
 	if remaining > 0 {
-		fillTrainers(d, byName, pool, rng, remaining)
+		fillTrainers(d, byName, pool, rng, remaining, types)
 	}
 
 	// Fallback: pad with energy if no trainers available
@@ -169,7 +170,8 @@ func findBasicEnergy(pool []*cards.Card, typ string) string {
 
 // fillTrainers preenche target slots com Treinadores legais no Standard,
 // distribuídos por subtipo em round-robin (até 4 cópias por nome).
-func fillTrainers(d *deck.Deck, byName map[string]int, pool []*cards.Card, rng *rand.Rand, target int) {
+// deckTypes é usado para excluir Itens/Suportes que buscam tipos incompatíveis.
+func fillTrainers(d *deck.Deck, byName map[string]int, pool []*cards.Card, rng *rand.Rand, target int, deckTypes []string) {
 	var supporters, items, tools, stadiums []*cards.Card
 	for _, c := range pool {
 		if c.Category != cards.CategoryTrainer || !c.StandardLegal() {
@@ -180,13 +182,17 @@ func fillTrainers(d *deck.Deck, byName map[string]int, pool []*cards.Card, rng *
 		}
 		switch c.TrainerType {
 		case "Supporter":
-			supporters = append(supporters, c)
+			if trainerCompatible(c, deckTypes) {
+				supporters = append(supporters, c)
+			}
 		case "Tool":
 			tools = append(tools, c)
 		case "Stadium":
 			stadiums = append(stadiums, c)
 		default:
-			items = append(items, c)
+			if trainerCompatible(c, deckTypes) {
+				items = append(items, c)
+			}
 		}
 	}
 	for _, g := range []*[]*cards.Card{&supporters, &items, &tools, &stadiums} {
@@ -254,4 +260,36 @@ func hasDamagingAttack(c *cards.Card) bool {
 		}
 	}
 	return false
+}
+
+// trainerCompatible retorna false se o treinador tiver busca de tipo específico
+// incompatível com o deck (ex.: Fighting Gong num deck Fire). Cartas type-neutral
+// ou com efeito manual passam sempre.
+func trainerCompatible(c *cards.Card, deckTypes []string) bool {
+	ce := game.CompileEffect(c.Effect.EN)
+	for _, op := range ce.Ops {
+		if op.Kind != game.OpSearch {
+			continue
+		}
+		compatible := false
+		for _, f := range op.Find {
+			if f.Type == "" {
+				compatible = true
+				break
+			}
+			for _, dt := range deckTypes {
+				if dt == f.Type {
+					compatible = true
+					break
+				}
+			}
+			if compatible {
+				break
+			}
+		}
+		if !compatible {
+			return false
+		}
+	}
+	return true
 }

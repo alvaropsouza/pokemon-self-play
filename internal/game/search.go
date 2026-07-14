@@ -20,14 +20,24 @@ type Find struct {
 	Type     string `json:"type,omitempty"`  // tipo de energia/Pokémon ("" = qualquer)
 }
 
-// PendingChoice é uma busca aguardando a escolha do jogador.
+// ChoiceKind diferencia o tipo de escolha pendente.
+type ChoiceKind string
+
+const (
+	ChoiceSearch     ChoiceKind = "search"      // busca no deck
+	ChoiceSwitchSelf ChoiceKind = "switch_self" // troca Ativo↔Banco próprio
+	ChoiceSwitchOpp  ChoiceKind = "switch_opp"  // atacante escolhe Banco do oponente para virar Ativo
+)
+
+// PendingChoice é uma escolha aguardando o jogador.
 type PendingChoice struct {
+	Kind       ChoiceKind
 	Player     int
-	Dest       string // "hand" | "bench"
-	Max        int    // máximo de cartas a pegar (mínimo é sempre 0)
-	Candidates []int  // índices no deck do jogador
-	Reveal     bool   // cartas pegas são reveladas no log
-	rest       []Op   // ops restantes do efeito, executadas após a resolução
+	Dest       string // "hand" | "bench" (busca no deck)
+	Max        int    // máximo de itens a escolher (mínimo = sempre 0)
+	Candidates []int  // índices: deck (search) ou Bench (switch)
+	Reveal     bool   // itens escolhidos são revelados no log (busca)
+	rest       []Op   // ops restantes executadas após a resolução
 }
 
 // matchFind informa se a carta satisfaz o critério.
@@ -91,66 +101,118 @@ func (g *Game) startSearch(p int, op Op, rest []Op) bool {
 	}
 
 	g.Pending = &PendingChoice{
-		Player: p, Dest: op.Dest, Max: max,
+		Kind: ChoiceSearch, Player: p, Dest: op.Dest, Max: max,
 		Candidates: cand, Reveal: true, rest: rest,
 	}
 	return true
 }
 
-// ResolveChoice conclui a busca pendente: picks são posições na lista
-// Candidates (0..len-1), até Max, podendo ser vazio (busca "falha").
+// startSwitchPending cria escolha pendente de troca de Ativo↔Banco.
+// forOpp=true: atacante (p) escolhe qual Pokémon do Banco do oponente vira Ativo.
+// Retorna true se ficou pendente; false se não há Banco (nada a fazer).
+func (g *Game) startSwitchPending(p int, forOpp bool, rest []Op) bool {
+	target := p
+	kind := ChoiceSwitchSelf
+	if forOpp {
+		target = 1 - p
+		kind = ChoiceSwitchOpp
+	}
+	bench := g.Players[target].Bench
+	if len(bench) == 0 {
+		g.runOps(p, rest, nil)
+		return false
+	}
+	cand := make([]int, len(bench))
+	for i := range cand {
+		cand[i] = i
+	}
+	g.Pending = &PendingChoice{
+		Kind: kind, Player: p, Max: 1, Candidates: cand, rest: rest,
+	}
+	return true
+}
+
+// ResolveChoice conclui uma escolha pendente (busca no deck ou troca de Ativo).
+// picks são posições na lista Candidates (0..len-1), até Max, podendo ser vazio.
 func (g *Game) ResolveChoice(p int, picks []int) error {
 	pc := g.Pending
 	if pc == nil || pc.Player != p {
 		return fmt.Errorf("jogador %d não tem escolha pendente", p+1)
 	}
 	if len(picks) > pc.Max {
-		return fmt.Errorf("máximo de %d carta(s), %d escolhida(s)", pc.Max, len(picks))
+		return fmt.Errorf("máximo de %d escolha(s), %d fornecida(s)", pc.Max, len(picks))
 	}
 	seen := map[int]bool{}
-	var deckIdxs []int
 	for _, pk := range picks {
 		if pk < 0 || pk >= len(pc.Candidates) || seen[pk] {
 			return fmt.Errorf("escolha inválida/repetida: %d", pk)
 		}
 		seen[pk] = true
-		deckIdxs = append(deckIdxs, pc.Candidates[pk])
 	}
 
-	ps := g.Players[p]
-	// Remove do deck em ordem decrescente de índice (não desloca os demais).
-	for i := 0; i < len(deckIdxs); i++ {
-		for j := i + 1; j < len(deckIdxs); j++ {
-			if deckIdxs[j] > deckIdxs[i] {
-				deckIdxs[i], deckIdxs[j] = deckIdxs[j], deckIdxs[i]
+	switch pc.Kind {
+	case ChoiceSwitchSelf, ChoiceSwitchOpp:
+		if len(picks) > 0 {
+			benchIdx := pc.Candidates[picks[0]]
+			owner := p
+			if pc.Kind == ChoiceSwitchOpp {
+				owner = 1 - p
+			}
+			g.performSwitch(owner, benchIdx)
+		}
+	default: // ChoiceSearch
+		ps := g.Players[p]
+		var deckIdxs []int
+		for _, pk := range picks {
+			deckIdxs = append(deckIdxs, pc.Candidates[pk])
+		}
+		// Remove do deck em ordem decrescente de índice.
+		for i := 0; i < len(deckIdxs); i++ {
+			for j := i + 1; j < len(deckIdxs); j++ {
+				if deckIdxs[j] > deckIdxs[i] {
+					deckIdxs[i], deckIdxs[j] = deckIdxs[j], deckIdxs[i]
+				}
 			}
 		}
-	}
-	var names []string
-	for _, di := range deckIdxs {
-		id := ps.Deck[di]
-		ps.Deck = append(ps.Deck[:di], ps.Deck[di+1:]...)
-		names = append(names, g.Card(id).Name.EN)
-		if pc.Dest == "bench" {
-			ps.Bench = append(ps.Bench, &PokemonInPlay{Stack: []string{id}, EnteredTurn: g.TurnNumber})
-		} else {
-			ps.Hand = append(ps.Hand, id)
+		var names []string
+		for _, di := range deckIdxs {
+			id := ps.Deck[di]
+			ps.Deck = append(ps.Deck[:di], ps.Deck[di+1:]...)
+			names = append(names, g.Card(id).Name.EN)
+			if pc.Dest == "bench" {
+				ps.Bench = append(ps.Bench, &PokemonInPlay{Stack: []string{id}, EnteredTurn: g.TurnNumber})
+			} else {
+				ps.Hand = append(ps.Hand, id)
+			}
 		}
+		if len(names) == 0 {
+			g.logf("jogador %d: busca no deck sem pegar nada", p+1)
+		} else if pc.Reveal {
+			g.logf("jogador %d: busca revela %s → %s", p+1, strings.Join(names, ", "), destPT(pc.Dest))
+		} else {
+			g.logf("jogador %d: busca pega %d carta(s) → %s", p+1, len(names), destPT(pc.Dest))
+		}
+		g.shuffle(ps.Deck)
 	}
-
-	if len(names) == 0 {
-		g.logf("jogador %d: busca no deck sem pegar nada", p+1)
-	} else if pc.Reveal {
-		g.logf("jogador %d: busca revela %s → %s", p+1, strings.Join(names, ", "), destPT(pc.Dest))
-	} else {
-		g.logf("jogador %d: busca pega %d carta(s) → %s", p+1, len(names), destPT(pc.Dest))
-	}
-	g.shuffle(ps.Deck)
 
 	rest := pc.rest
 	g.Pending = nil
 	g.runOps(p, rest, nil)
 	return nil
+}
+
+// performSwitch troca o Ativo do jogador p com Bench[benchIdx], removendo condições do que saiu.
+func (g *Game) performSwitch(p, benchIdx int) {
+	ps := g.Players[p]
+	if ps.Active == nil || benchIdx < 0 || benchIdx >= len(ps.Bench) {
+		return
+	}
+	old := ps.Active
+	old.clearConditions()
+	ps.Active = ps.Bench[benchIdx]
+	ps.Bench[benchIdx] = old
+	g.logf("jogador %d: %s → Banco, %s → Ativo", p+1,
+		g.Card(old.TopID()).Name.EN, g.Card(ps.Active.TopID()).Name.EN)
 }
 
 func destPT(dest string) string {

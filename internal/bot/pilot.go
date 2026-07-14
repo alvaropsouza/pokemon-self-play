@@ -82,23 +82,27 @@ func TakeTurn(g *game.Game, player int) {
 		}
 	}
 
-	// Suporte: joga se mão pequena e tem Suporte de compra.
+	// Suporte: joga o melhor disponível.
 	if !ps.SupporterPlayed {
-		playDrawSupporter(g, player)
+		playBestSupporter(g, player)
 	}
+
+	// Items úteis: busca de Pokémon/Energia com mão pequena.
+	playUsefulItems(g, player)
 
 	// Energia: no Ativo se o melhor ataque dele ainda não está pago; senão no banco.
 	if idx := energyInHand(g, player); idx >= 0 {
 		target := game.ActiveSlot
-		if ps.Active != nil && bestPaidAttack(g, ps.Active) >= 0 && len(ps.Bench) > 0 {
+		if ps.Active != nil && bestAttack(g, player, ps.Active) >= 0 && len(ps.Bench) > 0 {
 			target = 0
 		}
 		_ = g.AttachEnergy(player, idx, target)
 	}
 
-	// Ataca com o maior dano pago; senão passa.
+	// Ataca: MC search para escolher melhor ataque (ou passar).
 	if ps.Active != nil {
-		if atk := bestPaidAttack(g, ps.Active); atk >= 0 {
+		atk := MCPickAttack(g, player)
+		if atk >= 0 {
 			if g.Attack(player, atk) == nil {
 				return
 			}
@@ -135,41 +139,141 @@ func energyInHand(g *game.Game, player int) int {
 	return -1
 }
 
-// bestPaidAttack devolve o índice do ataque pago de maior dano (≥1), ou -1.
-// Ataques de custo vazio com dano 0 (efeito puro) são ignorados.
-func bestPaidAttack(g *game.Game, pk *game.PokemonInPlay) int {
-	c := g.Card(pk.TopID())
-	best, bestDmg := -1, 0
-	for i, atk := range c.Attacks {
-		if !g.CostPaid(pk, atk.Cost) {
-			continue
-		}
-		dmg := game.BaseDamage(atk.Damage)
-		if dmg > bestDmg {
-			best, bestDmg = i, dmg
+
+// supporterScore atribui um valor heurístico a um Supporter com base nos ops compilados.
+// Maior = mais valioso agora. Zero = não jogar.
+func supporterScore(g *game.Game, player int, ops []game.Op) int {
+	ps := g.Players[player]
+	score := 0
+	for _, op := range ops {
+		switch op.Kind {
+		case game.OpDraw, game.OpDrawUntil, game.OpDrawBoth, game.OpDrawPerPrizeBoth,
+			game.OpShuffleHandBoth, game.OpShuffleHandSelf:
+			score += 30
+		case game.OpSearch:
+			score += 20
+		case game.OpSwitchOpp:
+			// Vantajoso se o Ativo do oponente tem pouco HP restante.
+			opp := g.Players[1-player]
+			if opp.Active != nil {
+				c := g.Card(opp.Active.TopID())
+				remaining := c.HP - opp.Active.Damage
+				if remaining <= 60 {
+					score += 25
+				} else {
+					score += 5
+				}
+			}
+		case game.OpStatus:
+			if !op.OnSelf {
+				score += 10
+			}
 		}
 	}
-	return best
+	// Não jogar Supporter com mão cheia a menos que ele embaralhe a mão.
+	if len(ps.Hand) > 5 {
+		hasRefresh := false
+		for _, op := range ops {
+			if op.Kind == game.OpShuffleHandBoth || op.Kind == game.OpShuffleHandSelf {
+				hasRefresh = true
+			}
+		}
+		if !hasRefresh {
+			return 0
+		}
+	}
+	return score
 }
 
-// playDrawSupporter plays a draw/refresh Supporter from hand when hand is small.
-func playDrawSupporter(g *game.Game, player int) {
+// playBestSupporter escolhe e joga o Supporter de maior valor heurístico.
+func playBestSupporter(g *game.Game, player int) {
 	ps := g.Players[player]
-	if len(ps.Hand) > 4 {
-		return
-	}
+	bestIdx, bestScore := -1, 0
 	for i, id := range ps.Hand {
 		c := g.Card(id)
 		if c.Category != cards.CategoryTrainer || c.TrainerType != "Supporter" {
 			continue
 		}
 		ce := game.CompileEffect(c.Effect.EN)
+		if ce.Manual {
+			continue
+		}
+		if s := supporterScore(g, player, ce.Ops); s > bestScore {
+			bestScore, bestIdx = s, i
+		}
+	}
+	if bestIdx >= 0 {
+		_ = g.PlaySupporter(player, bestIdx)
+	}
+}
+
+// playUsefulItems joga Items de busca (search) quando mão está pequena.
+func playUsefulItems(g *game.Game, player int) {
+	ps := g.Players[player]
+	if len(ps.Hand) > 4 {
+		return
+	}
+	for i := 0; i < len(ps.Hand); i++ {
+		c := g.Card(ps.Hand[i])
+		if c.Category != cards.CategoryTrainer || c.TrainerType != "Item" {
+			continue
+		}
+		ce := game.CompileEffect(c.Effect.EN)
+		if ce.Manual {
+			continue
+		}
 		for _, op := range ce.Ops {
-			switch op.Kind {
-			case game.OpDraw, game.OpDrawUntil, game.OpDrawBoth, game.OpDrawPerPrizeBoth:
-				_ = g.PlaySupporter(player, i)
-				return
+			if op.Kind == game.OpSearch {
+				if g.PlayItem(player, i) == nil {
+					ResolvePending(g, player)
+					i-- // índice deslocou após remoção
+				}
+				break
 			}
 		}
 	}
+}
+
+// attackScore estima o valor de um ataque considerando dano + efeitos compilados.
+func attackScore(g *game.Game, player int, pk *game.PokemonInPlay, atkIdx int) int {
+	c := g.Card(pk.TopID())
+	atk := c.Attacks[atkIdx]
+	if !g.CostPaid(pk, atk.Cost) {
+		return -1
+	}
+	score := game.BaseDamage(atk.Damage) + game.ExtraAttackDamage(g, player, atk, pk)
+	ce := game.CompileEffect(atk.Effect.EN)
+	for _, op := range ce.Ops {
+		switch op.Kind {
+		case game.OpStatus:
+			if !op.OnSelf {
+				score += 15 // condição no oponente vale algo
+			}
+		case game.OpDamageOppBench:
+			score += op.N * len(g.Players[1-player].Bench) / 2
+		case game.OpSwitchOpp:
+			opp := g.Players[1-player]
+			if opp.Active != nil {
+				remaining := g.Card(opp.Active.TopID()).HP - opp.Active.Damage
+				if remaining > 60 {
+					score += 10 // trazer alvo mais fraco
+				}
+			}
+		case game.OpHealSelf:
+			score += op.N / 4
+		}
+	}
+	return score
+}
+
+// bestAttack devolve o índice do ataque com maior score, ou -1 se nenhum pago.
+func bestAttack(g *game.Game, player int, pk *game.PokemonInPlay) int {
+	best, bestScore := -1, -1
+	c := g.Card(pk.TopID())
+	for i := range c.Attacks {
+		if s := attackScore(g, player, pk, i); s > bestScore {
+			bestScore, best = s, i
+		}
+	}
+	return best
 }

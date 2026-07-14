@@ -6,8 +6,9 @@
      Divisor orça 2 tapetes (banco+ativo) + barra de ações + mão sem estourar 100vh.
      350 = cromo fixo real: paddings/gaps externos + labels, HP e barra de ações
      + folga da mão (que cresce com --cw*1.25). */
-  /* 450 = cromo real: app-padding + gaps + actionbar + hand-tray + mat-padding + labels + HP + energias */
-  --cw:clamp(60px, calc((100vh - 450px) / 8), 118px);
+  /* 360 = cromo real medido: app-padding(32) + gaps(24) + statusbar(40) + hand-tray
+     + mat-padding + labels + HP; divisor 7.6 ≈ 3.1cw por tapete + 1.4cw da mão */
+  --cw:clamp(64px, calc((100vh - 360px) / 7.6), 150px);
 }
 * { box-sizing:border-box; }
 html, body, #root { height:100%; }
@@ -58,7 +59,9 @@ body {
 .apoio { width:100%; flex:0 1 82%; border:2px solid rgba(255,255,255,.4); border-radius:4px 18px 4px 18px; background:rgba(255,255,255,.14); padding:6px; display:flex; flex-direction:column; align-items:center; gap:4px; }
 
 .benchrow { display:flex; gap:10px; justify-content:center; }
-.base { border-radius:10px; padding:3px; background:rgba(255,255,255,.06); }
+/* fit-content: caixa abraça a carta (label "Pokémon Ativo" é mais larga que a
+   carta e esticava o bloco, desalinhando a borda) */
+.base { border-radius:10px; padding:3px; background:rgba(255,255,255,.06); width:fit-content; margin:0 auto; display:flex; flex-direction:column; align-items:center; }
 .base.over { outline:2px solid var(--ok); background:rgba(87,194,107,.18); }
 /* slot destacado como alvo válido de pick inline */
 .base.picking { outline:2px solid var(--ok); background:rgba(87,194,107,.14); cursor:pointer; animation:pickpulse 1.5s ease-in-out infinite; }
@@ -145,7 +148,8 @@ button.primary { background:var(--accent); color:#1a1a1a; font-weight:700; borde
 /* bot pensando: elipsis animado */
 @keyframes ellipsis { 0%,20% { content:'…'; } 40% { content:'. '; } 70% { content:'.. '; } }
 #actions span[style*="dim"]::after { content:''; animation:ellipsis 1.8s infinite; }
-#handtray .card { width:clamp(92px, calc(var(--cw) * 1.25), 152px); transition:transform .15s ease-out; }
+/* mão cresce menos que o tabuleiro (1.1×) para não roubar altura dos tapetes */
+#handtray .card { width:clamp(88px, calc(var(--cw) * 1.1), 140px); transition:transform .15s ease-out; }
 #handtray .cardbox:hover { z-index:2; position:relative; }
 #handtray .cardbox:hover .card { transform:translateY(-10px) scale(1.07); box-shadow:0 8px 20px rgba(0,0,0,.5); }
 #handtray .empty-hand { color:var(--dim); padding:0 10px; }

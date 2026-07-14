@@ -146,9 +146,13 @@ Available ops (JSON objects):
   {"kind":"damage_self_bench","n":N}         N damage to each of your benched Pokémon
   {"kind":"heal_self","n":N}                 heal N from the attacking Pokémon
   {"kind":"discard_self_energy","n":N}       discard N energies from the attacker (n:-1 = all)
+  {"kind":"discard_opp_energy","n":N}        discard N energies from opponent's Active (n:-1 = all); use with "flip":true for coin-flip discard
   {"kind":"scale_per_energy_self","n":N}     attack does +N per energy attached to attacker
   {"kind":"scale_per_energy_opp","n":N}      attack does +N per energy on opponent's Active
+  {"kind":"damage_self","n":N}               put N damage on own Active (recoil / "this Pokémon does N damage to itself")
   {"kind":"status","cond":C,"onSelf":bool,"flip":bool}  special condition on the Active (cond: asleep|confused|paralyzed|poisoned|burned; onSelf:true = attacker's own Active; flip:true = only on heads)
+  {"kind":"switch_self"}                     switch own Active with a chosen Benched Pokémon (player picks; clears conditions on the retiring Active)
+  {"kind":"switch_opp"}                      the attacker chooses 1 of opponent's Benched Pokémon and forces it to become Active ("switch in", "gust" effects; clears conditions on retiring opp Active)
   {"kind":"search","n":N,"dest":D,"find":[F...]}        search your deck for up to N cards matching ANY F, put into D ("hand"|"bench"); F = {"category":"Pokemon"|"Energy","stage":"Basic"|omit,"type":"Fire"|omit}. Energy = Basic Energy only. Deck is shuffled after.
   {"kind":"shuffle_deck"}                               shuffle your own deck
 
@@ -157,7 +161,7 @@ Any op may carry "flip":true meaning it only happens on a heads coin flip.
 Rules:
 - An effect is expressible ONLY if EVERY clause of the text maps exactly to the ops above. Partial coverage is forbidden.
 - "search" only for deck→hand/bench with filters expressible as category/stage/type. Searches with HP conditions, name conditions, evolution/ex filters, or other zones → {"manual":true}.
-- Effects with switching, choices of targets, durations ("during your next turn..."), conditions on game state, or anything not listed → {"manual":true}.
+- Effects with durations ("during your next turn...", "until end of your next turn"), conditions on game state, choices of damage amounts, or anything not listed → {"manual":true}.
 - Output ONLY a JSON object mapping each input text verbatim to either {"ops":[...]} or {"manual":true}. No prose, no markdown fences.`
 
 type apiRequest struct {

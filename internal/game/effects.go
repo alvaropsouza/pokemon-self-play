@@ -35,6 +35,10 @@ const (
 	OpStatus             OpKind = "status"                // Condição Especial (Cond) no Ativo do alvo
 	OpSearch             OpKind = "search"                // busca no deck (Find/Dest/N) — escolha do jogador
 	OpShuffleDeck        OpKind = "shuffle_deck"          // embaralha o próprio deck
+	OpSwitchSelf         OpKind = "switch_self"           // troca o próprio Ativo com um do Banco (escolha)
+	OpSwitchOpp          OpKind = "switch_opp"            // força oponente a trazer Pokémon do Banco (atacante escolhe qual)
+	OpDiscardOppEnergy   OpKind = "discard_opp_energy"    // descarta N Energias do Ativo do oponente (N=-1 → todas)
+	OpDamageSelf         OpKind = "damage_self"           // coloca N de dano no próprio Ativo (recuo/recoil)
 )
 
 // Op é uma operação primitiva compilada do texto do efeito.
@@ -139,6 +143,27 @@ var patterns = []pattern{
 	}},
 	{regexp.MustCompile(`shuffle your hand.*?into (?:the bottom of )?your deck`), func(m []string) []Op {
 		return []Op{{Kind: OpShuffleHandSelf}}
+	}},
+	{regexp.MustCompile(`switch your active pokemon with (?:1 of )?your benched pokemon`), func(m []string) []Op {
+		return []Op{{Kind: OpSwitchSelf}}
+	}},
+	{regexp.MustCompile(`switch (?:1 of )?your opponent's benched pokemon with their active pokemon`), func(m []string) []Op {
+		return []Op{{Kind: OpSwitchOpp}}
+	}},
+	{regexp.MustCompile(`switch in (?:1 of )?your opponent's benched pokemon(?: to the active spot)?`), func(m []string) []Op {
+		return []Op{{Kind: OpSwitchOpp}}
+	}},
+	{regexp.MustCompile(`discard (\d+)[\w ]{0,30}energy (?:cards? )?from your opponent's active pokemon`), func(m []string) []Op {
+		return []Op{{Kind: OpDiscardOppEnergy, N: atoi(m[1])}}
+	}},
+	{regexp.MustCompile(`discard all[\w ]{0,20}energy from your opponent's active pokemon`), func(m []string) []Op {
+		return []Op{{Kind: OpDiscardOppEnergy, N: -1}}
+	}},
+	{regexp.MustCompile(`this pokemon does (\d+) damage to itself`), func(m []string) []Op {
+		return []Op{{Kind: OpDamageSelf, N: atoi(m[1])}}
+	}},
+	{regexp.MustCompile(`put (\d+) damage counters? on this pokemon`), func(m []string) []Op {
+		return []Op{{Kind: OpDamageSelf, N: atoi(m[1]) * 10}}
 	}},
 }
 
@@ -437,6 +462,33 @@ func (g *Game) runOps(p int, ops []Op, attacker *PokemonInPlay) {
 				return // pendente: restante roda em ResolveChoice
 			}
 			return // auto-resolvida: startSearch já rodou o restante
+		case OpSwitchSelf:
+			if g.startSwitchPending(p, false, ops[i+1:]) {
+				return
+			}
+		case OpSwitchOpp:
+			if g.startSwitchPending(p, true, ops[i+1:]) {
+				return
+			}
+		case OpDiscardOppEnergy:
+			opp := 1 - p
+			if a := g.Players[opp].Active; a != nil {
+				n := op.N
+				if n < 0 || n > len(a.Energies) {
+					n = len(a.Energies)
+				}
+				idxs := make([]int, n)
+				for j := range idxs {
+					idxs[j] = j
+				}
+				_ = g.discardEnergies(opp, a, idxs)
+				g.logf("descarta %d Energia(s) do Ativo do oponente", n)
+			}
+		case OpDamageSelf:
+			if attacker != nil {
+				attacker.Damage += op.N
+				g.logf("%s recebe %d de dano (recoil)", g.Card(attacker.TopID()).Name.EN, op.N)
+			}
 		case OpShuffleDeck:
 			g.shuffle(g.Players[p].Deck)
 			g.logf("jogador %d: embaralha o deck", p+1)
