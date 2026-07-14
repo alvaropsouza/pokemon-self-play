@@ -1,4 +1,4 @@
-import { useContext, useState, useEffect } from 'react'
+import { useContext, useRef, useState, useEffect } from 'react'
 import type { CardView, PokemonView } from '../api'
 import { energyColor, energyDotStyle, energyImage } from '../energy'
 import { PreviewCtx } from '../preview'
@@ -47,9 +47,20 @@ export function Card({ view, selected, onClick, dragData }: {
   const setPreview = useContext(PreviewCtx)
   const img = c.image || (c.category === 'Energy' ? energyImage(c.nameEN) : '')
   const [imgErr, setImgErr] = useState(false)
-  // Reset imgErr se a src mudar (ex.: evolução troca a carta)
   useEffect(() => { setImgErr(false) }, [img])
-  const cls = 'cardbox' + (onClick ? ' click' : '') + (selected ? ' sel' : '')
+  const prevDmg = useRef(pk?.damage ?? 0)
+  const [hit, setHit] = useState(false)
+  useEffect(() => {
+    const d = pk?.damage ?? 0
+    if (d > prevDmg.current) {
+      setHit(true)
+      const t = setTimeout(() => setHit(false), 450)
+      prevDmg.current = d
+      return () => clearTimeout(t)
+    }
+    prevDmg.current = d
+  }, [pk?.damage])
+  const cls = 'cardbox' + (onClick ? ' click' : '') + (selected ? ' sel' : '') + (hit ? ' hit' : '')
   return (
     <div className={cls} onClick={onClick}
       role={onClick ? 'button' : undefined}
