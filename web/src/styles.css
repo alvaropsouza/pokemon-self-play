@@ -206,6 +206,8 @@ body {
 .discard-top .card { width:calc(var(--cw) * .72); }
 /* pilhas do bot viradas para ele, como na mesa física (contador fica em pé) */
 .mat.bot .pile .back, .mat.bot .discard-top .card { transform:rotate(180deg); }
+/* banco do bot virado para ele; overlays (dano, HP) seguem em pé */
+.mat.bot .benchrow .card { transform:rotate(180deg); }
 /* sem rótulos nas pilhas do bot: posição + verso já identificam */
 .mat.bot .pilescol .mlabel { display:none; }
 .apoio .card, .apoio .slot { width:calc(var(--cw) * .72); }
