@@ -88,3 +88,13 @@ func (c *Card) StandardLegal() bool {
 	}
 	return false
 }
+
+// IsBasicPokemon reporta se é um Pokémon Básico.
+func (c *Card) IsBasicPokemon() bool {
+	return c.Category == CategoryPokemon && c.Stage == "Basic"
+}
+
+// IsBasicEnergy reporta se é uma Energia Básica (TCGdex usa EnergyType != "Special").
+func (c *Card) IsBasicEnergy() bool {
+	return c.Category == CategoryEnergy && c.EnergyType != "Special"
+}

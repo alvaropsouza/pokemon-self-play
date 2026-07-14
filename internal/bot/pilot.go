@@ -125,7 +125,7 @@ func bestBasicInHand(g *game.Game, player int) int {
 	best, bestHP := -1, -1
 	for i, id := range g.Players[player].Hand {
 		c := g.Card(id)
-		if c.Category == cards.CategoryPokemon && c.Stage == "Basic" && c.HP > bestHP {
+		if c.IsBasicPokemon() && c.HP > bestHP {
 			best, bestHP = i, c.HP
 		}
 	}

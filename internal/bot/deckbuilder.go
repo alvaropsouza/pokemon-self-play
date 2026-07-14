@@ -162,8 +162,7 @@ func BuildDeck(store *cards.Store, types []string, seed int64) (*deck.Deck, erro
 func findBasicEnergy(pool []*cards.Card, typ string) string {
 	want := typ + " Energy"
 	for _, c := range pool {
-		if c.Category == cards.CategoryEnergy && c.EnergyType != "Special" &&
-			strings.TrimPrefix(c.Name.EN, "Basic ") == want {
+		if c.IsBasicEnergy() && strings.TrimPrefix(c.Name.EN, "Basic ") == want {
 			return c.ID
 		}
 	}

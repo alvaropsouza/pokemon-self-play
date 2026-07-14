@@ -66,7 +66,7 @@ func (d *Deck) Validate(store *cards.Store) []error {
 			continue
 		}
 		// Energia Básica é sempre legal (qualquer impressão) e sem limite de cópias.
-		if !isBasicEnergy(c) {
+		if !c.IsBasicEnergy() {
 			if !c.StandardLegal() {
 				errs = append(errs, fmt.Errorf("%s (%s): fora do Standard (marca %q)", c.Name.EN, id, c.RegulationMark))
 			}
@@ -75,7 +75,7 @@ func (d *Deck) Validate(store *cards.Store) []error {
 		if isAceSpec(c) {
 			aceSpecs += n
 		}
-		if c.Category == cards.CategoryPokemon && c.Stage == "Basic" {
+		if c.IsBasicPokemon() {
 			hasBasic = true
 		}
 	}
@@ -102,10 +102,6 @@ func (d *Deck) Validate(store *cards.Store) []error {
 	return errs
 }
 
-// isBasicEnergy: TCGdex usa "Normal" para Energia Básica ("Special" para Especial).
-func isBasicEnergy(c *cards.Card) bool {
-	return c.Category == cards.CategoryEnergy && c.EnergyType != "Special"
-}
 
 func isAceSpec(c *cards.Card) bool {
 	return strings.Contains(strings.ToUpper(c.Rarity), "ACE SPEC")

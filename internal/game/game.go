@@ -273,15 +273,11 @@ func (g *Game) flip() bool { return g.rng.Intn(2) == 0 }
 
 func (g *Game) handHasBasic(hand []string) bool {
 	for _, id := range hand {
-		if c := g.store.Cards[id]; c != nil && isBasicPokemon(c) {
+		if c := g.store.Cards[id]; c != nil && c.IsBasicPokemon() {
 			return true
 		}
 	}
 	return false
-}
-
-func isBasicPokemon(c *cards.Card) bool {
-	return c.Category == cards.CategoryPokemon && c.Stage == "Basic"
 }
 
 // drawCard move 1 carta do topo do deck para a mão. Devolve false se o deck
@@ -311,7 +307,7 @@ func (g *Game) PlaceActive(p, handIdx int) error {
 	if err != nil {
 		return err
 	}
-	if !isBasicPokemon(c) {
+	if !c.IsBasicPokemon() {
 		return fmt.Errorf("%s não é Pokémon Básico", c.Name.EN)
 	}
 	ps.Active = &PokemonInPlay{Stack: []string{c.ID}}
@@ -341,7 +337,7 @@ func (g *Game) PlaceBench(p, handIdx int) error {
 	if err != nil {
 		return err
 	}
-	if !isBasicPokemon(c) {
+	if !c.IsBasicPokemon() {
 		return fmt.Errorf("%s não é Pokémon Básico", c.Name.EN)
 	}
 	ps.Bench = append(ps.Bench, &PokemonInPlay{Stack: []string{c.ID}, EnteredTurn: g.TurnNumber})

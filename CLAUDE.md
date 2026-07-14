@@ -2,6 +2,8 @@
 
 > **Boas práticas Go obrigatórias:** siga `docs/go-best-practices.md` em todo código Go escrito neste projeto — erros com `%w`, zero dependências externas, motor single-threaded, `task check` deve passar.
 
+> **Comentários:** não escreva comentários. O código deve ser legível o suficiente para dispensá-los — nomes precisos, funções pequenas, fluxo óbvio. A única exceção são godocs de funções/tipos exportados quando o contrato não é óbvio pela assinatura. Ao tocar qualquer arquivo, apague comentários que já existam (exceto godocs bem escritos de exportados). Nunca documente o "quê" — só o "porquê" oculto, e apenas quando não há outra forma de expressar isso no próprio código.
+
 App em Go para jogar Pokémon TCG sozinho com cartas físicas. Uma câmera aponta para a mesa e enxerga todas as zonas do jogo; o app reconhece cartas e estado da partida, atua como oponente e árbitro.
 
 **Fases planejadas do projeto:**
