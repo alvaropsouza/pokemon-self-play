@@ -251,11 +251,6 @@ button.primary { background:var(--accent); color:#1a1a1a; font-weight:700; borde
 /* contador de dano pulsa quando muda (key pelo valor remonta o nó) */
 @keyframes dmgpop { 0% { transform:scale(1.8); } }
 .dmg { animation:dmgpop .3s ease-out; }
-/* flash vermelho + sway quando a carta recebe dano */
-@keyframes cardhit { from { opacity:.7; } to { opacity:0; } }
-@keyframes hitsway { 25% { transform:translateX(-4px) rotate(-.6deg); } 75% { transform:translateX(4px) rotate(.6deg); } }
-.cardbox.hit::after { content:''; position:absolute; inset:0; border-radius:6px; background:#c0392b; animation:cardhit .45s ease-out forwards; pointer-events:none; z-index:2; }
-.cardbox.hit .card { animation:hitsway .35s ease-out; }
 /* mão entre o Ativo e o banco na hierarquia: 1.2× --cw, rodapé tucado na bandeja */
 #handtray .card { width:clamp(96px, calc(var(--cw) * 1.2), 240px); transition:transform .15s ease-out; }
 #handtray .cardbox:hover { z-index:2; position:relative; }
@@ -441,7 +436,6 @@ button.primary { background:var(--accent); color:#1a1a1a; font-weight:700; borde
   #handtray .card, .hpbar i, .hud-bar i, .prize, .pp, #preview, .hud-status, .tool, #endturn { transition:none; }
   #endturn:hover { transform:none; }
   #winner, .winner-box { animation:none; }
-  .cardbox.hit::after, .cardbox.hit .card { animation:none; }
 }
 
 /* ---- painel de preview no hover ---- */
