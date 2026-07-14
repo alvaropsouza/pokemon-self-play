@@ -5,7 +5,7 @@ import { cancelFlights, flyFromDeck } from './drawfx'
 import { CardPreview, PreviewCtx, type Preview } from './preview'
 import { Sidebar } from './components/Sidebar'
 import { BotMat, YouMat } from './components/Mat'
-import { ActionBar, AttackMenu } from './components/ActionBar'
+import { AttackMenu, ContextBar, PHASE_LABEL, TurnTimer } from './components/ActionBar'
 import { Card } from './components/Card'
 import { Drawer, type Pane } from './components/Drawer'
 
@@ -72,11 +72,15 @@ function HandTray({ s, sel, onSelect }: {
   )
 }
 
-function RightRail({ pane, setPane, endTurn }: {
+// Painel lateral direito: status da vez + ferramentas + Terminar Turno.
+// Substitui a antiga barra horizontal entre tabuleiro e mão.
+function HudRail({ s, pane, setPane, endTurn }: {
+  s: GameState
   pane: Pane
   setPane: (p: Pane) => void
   endTurn: () => void
 }) {
+  const myTurn = s.current === 0
   const toggle = (p: Pane) => setPane(pane === p ? '' : p)
   const tool = (p: Pane, label: string) => (
     <div className={'tool' + (pane === p ? ' on' : '')} onClick={() => toggle(p)}>
@@ -85,12 +89,51 @@ function RightRail({ pane, setPane, endTurn }: {
   )
   return (
     <aside id="right">
+      <div className="hud-status">
+        <span className={'vez ' + (myTurn ? 'you' : 'bot')}>{myTurn ? 'SUA VEZ' : 'VEZ DO BOT'}</span>
+        <div className="hud-turnline">Turno {s.turn} · {PHASE_LABEL[s.phase] ?? s.phase}</div>
+        <TurnTimer turn={s.turn} current={s.current} />
+      </div>
       {tool('cfg', 'PARTIDA')}
-      <div className="spacer" />
       {tool('log', 'LOG')}
       {tool('arb', 'ARBITRAR')}
-      <button id="endturn" onClick={endTurn}>TERMINAR<br />TURNO</button>
+      <div className="spacer" />
+      <button id="endturn" onClick={endTurn} disabled={!myTurn || s.phase !== 'turn'}>
+        TERMINAR<br />TURNO
+      </button>
     </aside>
+  )
+}
+
+// Toasts temporários: erros de ação e eventos novos do log (efeitos, nocautes).
+// Histórico completo continua no painel de Log.
+function Toasts({ s, err, errN }: { s: GameState; err: string; errN: number }) {
+  const [toasts, setToasts] = useState<{ id: number; text: string; kind: 'err' | 'info' }[]>([])
+  const nextId = useRef(1)
+  const prevLog = useRef<number | null>(null)
+
+  const push = useCallback((text: string, kind: 'err' | 'info') => {
+    const id = nextId.current++
+    setToasts(t => [...t.slice(-3), { id, text, kind }])
+    setTimeout(() => setToasts(t => t.filter(x => x.id !== id)), 4000)
+  }, [])
+
+  useEffect(() => { if (err) push(err, 'err') }, [err, errN, push])
+
+  const logLen = s.log?.length ?? 0
+  useEffect(() => {
+    const p = prevLog.current
+    prevLog.current = logLen
+    // p === null: primeiro render (não toastar histórico); salto > 5: partida nova/setup.
+    if (p === null || logLen <= p || logLen - p > 5) return
+    s.log!.slice(p).forEach(l => push(l, 'info'))
+  }, [logLen, push]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  if (toasts.length === 0) return null
+  return (
+    <div id="toasts">
+      {toasts.map(t => <div key={t.id} className={'toast ' + t.kind}>{t.text}</div>)}
+    </div>
   )
 }
 
@@ -209,6 +252,7 @@ export default function App() {
   const [lobbyErr, setLobbyErr] = useState('')
   const [sel, setSel] = useState<Sel>(null)
   const [err, setErr] = useState('')
+  const [errN, setErrN] = useState(0) // nonce: mesmo erro repetido gera novo toast
   const [pane, setPane] = useState<Pane>('')
   const [preview, setPreview] = useState<Preview | null>(null)
   const publishPreview = useCallback((c: CardView | null, rect?: DOMRect) =>
@@ -234,6 +278,7 @@ export default function App() {
   const post = useCallback((body: Record<string, unknown>) => {
     postAction(body).then(j => {
       setErr(j.error ?? '')
+      if (j.error) setErrN(n => n + 1)
       // Guarda contra panic do servidor: resposta sem `phase` não atualiza o estado
       // (mantém o tabuleiro visível em vez de crashar no render).
       if (j.phase) setS(j)
@@ -300,11 +345,12 @@ export default function App() {
               }
             }} />
           <div id="hand-zone">
-            <ActionBar s={s} sel={sel} setSel={setSel} err={err} post={post} />
+            <ContextBar s={s} sel={sel} setSel={setSel} post={post} />
             <HandTray s={s} sel={sel} onSelect={i => select('hand', i)} />
           </div>
         </div>
-        <RightRail pane={pane} setPane={setPane} endTurn={() => post({ action: 'end_turn' })} />
+        <HudRail s={s} pane={pane} setPane={setPane} endTurn={() => post({ action: 'end_turn' })} />
+        <Toasts s={s} err={err} errN={errN} />
         <Drawer pane={pane} s={s} post={post} />
         <CardPreview p={preview} />
         {s.pendingChoice && <ChoiceOverlay key={s.log?.length} pc={s.pendingChoice} post={post} />}

@@ -2,6 +2,24 @@ import type { CardView, PokemonView, SideView } from '../api'
 import type { Sel } from '../api'
 import { energyColor } from '../energy'
 import { COND, Card, DeckPile, DiscardPile, EmptySlot, PokemonSlot } from './Card'
+import { EnergyCost, canPay } from './ActionBar'
+
+// Golpes do Ativo do bot, somente leitura — informação pública (carta + energias
+// visíveis); apagado quando a energia ligada não paga o custo.
+function MoveList({ view }: { view: PokemonView }) {
+  if (!view.card.attacks?.length) return null
+  return (
+    <div className="movebox">
+      {view.card.attacks.map((a, i) => (
+        <div key={i} className={'move ro' + (canPay(a.cost, view.energies ?? []) ? '' : ' off')}>
+          <EnergyCost cost={a.cost} />
+          <span className="move-name">{a.name}</span>
+          <span className="move-dmg">{a.damage || 'efeito'}</span>
+        </div>
+      ))}
+    </div>
+  )
+}
 
 // HUD de batalha estilo Game Boy: nome, HP em barra colorida, condições,
 // energias e ferramenta do Pokémon Ativo. Substitui os overlays na carta.
@@ -55,7 +73,6 @@ function Bench({ side, isYou, sel, onSelect, onDropHand, dragBench, pickMode }: 
 }) {
   return (
     <div>
-      <div className="mlabel">Banco</div>
       <div className="benchrow">
         {Array.from({ length: 5 }, (_, i) => {
           const b = side.bench?.[i]
@@ -129,7 +146,8 @@ export function BotMat({ side, stadium }: { side: SideView; stadium?: CardView }
       <Piles side={side} />
       <div className="battlefield">
         <Bench side={side} isYou={false} sel={null} onSelect={noop} />
-        <Stage side={side} isYou={false} sel={null} onSelect={noop} />
+        <Stage side={side} isYou={false} sel={null} onSelect={noop}
+          menu={side.active ? <MoveList view={side.active} /> : undefined} />
       </div>
       <div className="apoiocol">
         <div className="apoio">

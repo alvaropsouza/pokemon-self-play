@@ -7,7 +7,7 @@ import { energyColor } from '../energy'
 // ("Fire Energy" paga Fire); Colorless aceita qualquer sobra.
 // ponytail: heurística visual — energias especiais que valem 2+ não são
 // interpretadas; o motor continua validando o ataque de verdade.
-function canPay(cost: string[] | null, energies: CardView[]): boolean {
+export function canPay(cost: string[] | null, energies: CardView[]): boolean {
   if (!cost?.length) return true
   const used = new Set<number>()
   for (const t of cost.filter(c => c !== 'Colorless')) {
@@ -18,7 +18,7 @@ function canPay(cost: string[] | null, energies: CardView[]): boolean {
   return energies.length - used.size >= cost.filter(c => c === 'Colorless').length
 }
 
-function TurnTimer({ turn, current }: { turn: number; current: number }) {
+export function TurnTimer({ turn, current }: { turn: number; current: number }) {
   const [sec, setSec] = useState(0)
   useEffect(() => {
     setSec(0)
@@ -31,7 +31,7 @@ function TurnTimer({ turn, current }: { turn: number; current: number }) {
 }
 
 // Custo de energia como bolinhas coloridas dentro do botão de ataque.
-function EnergyCost({ cost }: { cost: string[] | null }) {
+export function EnergyCost({ cost }: { cost: string[] | null }) {
   if (!cost?.length) return null
   return (
     <span className="btn-cost">
@@ -43,7 +43,7 @@ function EnergyCost({ cost }: { cost: string[] | null }) {
 }
 
 // Rótulos das fases para o jogador — oculta strings internas do motor.
-const PHASE_LABEL: Record<string, string> = {
+export const PHASE_LABEL: Record<string, string> = {
   setup: 'Preparação',
   turn: 'Em jogo',
   finished: 'Encerrada',
@@ -92,16 +92,15 @@ export function AttackMenu({ s, sel, setSel, post }: {
   )
 }
 
-export function ActionBar({ s, sel, setSel, err, post }: {
+// Pill flutuante sobre a mão: só existe quando há ação contextual pendente
+// (setup, promoção, pick de alvo, recuo, ações da carta selecionada).
+// Status/turno/timer vivem no painel lateral direito (HudRail).
+export function ContextBar({ s, sel, setSel, post }: {
   s: GameState
   sel: Sel
   setSel: SetSel
-  err: string
   post: Post
 }) {
-  const myTurn = s.current === 0
-  const phaseTxt = PHASE_LABEL[s.phase] ?? s.phase
-
   const actions: React.ReactNode[] = []
 
   const util = (label: string, fn: () => void, key?: string) => (
@@ -124,7 +123,7 @@ export function ActionBar({ s, sel, setSel, err, post }: {
     if (sel?.kind === 'bench') actions.push(critical('Promover', () => post({ action: 'promote', bench: sel.idx })))
 
   } else if (s.current !== 0) {
-    actions.push(<span key="msg" style={{ color: 'var(--dim)' }}>Turno do bot…</span>)
+    // Turno do bot: o chip no painel lateral já informa; sem pill.
 
   } else if (sel?.kind === 'pending') {
     // Modo pick: aguardando clique num slot do tabuleiro.
@@ -205,18 +204,6 @@ export function ActionBar({ s, sel, setSel, err, post }: {
     // Ataques e Recuar vivem no AttackMenu, abaixo do HUD do Ativo (Mat).
   }
 
-  return (
-    <>
-      <div id="actionbar">
-        <span id="status">
-          <span className={'vez ' + (myTurn ? 'you' : 'bot')}>{myTurn ? 'SUA VEZ' : 'VEZ DO BOT'}</span>
-          <span>Turno {s.turn} · {phaseTxt}</span>
-          <TurnTimer turn={s.turn} current={s.current} />
-        </span>
-        <span className="bar-div" aria-hidden="true" />
-        <span id="actions">{actions}</span>
-      </div>
-      {err && <div className="err-banner">{err}</div>}
-    </>
-  )
+  if (actions.length === 0) return null
+  return <div id="ctxbar">{actions}</div>
 }
