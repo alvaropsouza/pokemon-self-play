@@ -35,13 +35,16 @@ body {
 .pp.you .avatar { color:var(--accent); background:rgba(245,185,66,.12); border-color:rgba(245,185,66,.4); }
 .prizes { background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:8px; text-align:center; }
 .prizes h4 { margin:0 0 6px; font-size:10px; letter-spacing:1px; color:var(--dim); }
-.prizes .col { display:flex; flex-direction:column; gap:4px; align-items:center; }
-.prize { width:56px; height:22px; border-radius:6px; background:#2b3352; border:1px solid #3c466e; position:relative; }
-.prize::after { content:''; position:absolute; inset:0; margin:auto; width:12px; height:12px; border-radius:50%; border:2px solid #4d5a87; background:linear-gradient(#5d6ca0 45%, #4d5a87 45%, #4d5a87 55%, #38426b 55%); }
-.prize.taken { background:transparent; border:1px dashed var(--line); }
-.prize.taken::after { display:none; }
+/* prêmios = Pokébolas fechadas; coletado = bola "aberta" (apagada + encolhida) */
+.prizes .col { display:grid; grid-template-columns:repeat(3, auto); gap:7px; justify-content:center; }
+.prize { width:22px; height:22px; border-radius:50%; border:2px solid #1a2138; position:relative;
+         background:linear-gradient(#d64d4d 44%, #1a2138 44%, #1a2138 56%, #dfe4f5 56%);
+         box-shadow:0 2px 4px rgba(0,0,0,.45);
+         transition:transform .3s ease-out, opacity .3s ease-out, filter .3s ease-out; }
+.prize::after { content:''; position:absolute; inset:0; margin:auto; width:7px; height:7px; border-radius:50%; background:#dfe4f5; border:2px solid #1a2138; }
+.prize.taken { opacity:.28; transform:scale(.8); filter:grayscale(1); box-shadow:none; }
 
-/* ---- tabuleiro central ---- */
+/* ---- arena central (batalha estilo Game Boy) ---- */
 #center { display:flex; flex-direction:column; gap:8px; min-width:0; min-height:0; }
 .mat { position:relative; flex:1; min-height:0; background:linear-gradient(160deg, var(--mat), var(--mat2)); border-radius:18px; padding:10px 16px; display:grid; gap:14px; overflow:hidden; color:var(--matink); }
 /* min-content: colunas de pilhas/Estádio seguem --cw (96px fixos cortavam a
@@ -51,30 +54,34 @@ body {
 /* identidade por lado: brilho interno na borda voltada ao adversário */
 .mat.bot { box-shadow:inset 0 28px 44px -28px rgba(95,140,255,.45), inset 0 0 0 1px rgba(95,140,255,.18); }
 .mat.you { box-shadow:inset 0 -28px 44px -28px rgba(245,185,66,.38), inset 0 0 0 1px rgba(245,185,66,.16); }
-.mat::before { /* marca-d'água de Pokébola, integrada ao tapete */
-  content:''; position:absolute; width:56%; aspect-ratio:1; left:50%; top:50%; transform:translate(-50%,-50%);
-  border-radius:50%; border:26px solid rgba(255,255,255,.06);
-  background:linear-gradient(transparent 45%, rgba(255,255,255,.06) 45%, rgba(255,255,255,.06) 55%, transparent 55%);
-  pointer-events:none;
+/* círculos concêntricos convergindo na costura central (entre os dois tapetes),
+   como as linhas de arena de estádio */
+.mat.bot::before, .mat.you::before {
+  content:''; position:absolute; inset:0; pointer-events:none;
+  background:repeating-radial-gradient(circle at 50% 130%, transparent 0 54px, rgba(180,195,255,.05) 54px 57px);
 }
-.mat::after { /* costura na borda, como playmat real */
-  content:''; position:absolute; inset:7px; border:1.5px dashed rgba(255,255,255,.13);
-  border-radius:12px; pointer-events:none;
+.mat.you::before { background:repeating-radial-gradient(circle at 50% -30%, transparent 0 54px, rgba(245,215,150,.05) 54px 57px); }
+/* scanlines sutis: textura de tela clássica sobre o feltro */
+.mat::after {
+  content:''; position:absolute; inset:0; pointer-events:none;
+  background:repeating-linear-gradient(0deg, rgba(0,0,0,.05) 0 1px, transparent 1px 4px);
 }
 .mat > * { position:relative; z-index:1; min-width:0; min-height:0; overflow:hidden; }
 .mlabel { font-size:10px; font-weight:700; letter-spacing:1px; text-transform:uppercase; color:var(--matink); opacity:.85; text-align:center; margin-bottom:4px; }
 .pilescol { display:flex; flex-direction:column; justify-content:space-around; align-items:center; }
-.fieldcol { display:flex; flex-direction:column; justify-content:space-evenly; min-width:0; }
-/* bot: ativo fica na borda inferior do fieldcol; padding evita clip das bolinhas de energia */
-.mat.bot .fieldcol { padding-bottom:18px; }
 /* Estádio: zona compartilhada — ancorada na borda inferior do tapete do bot,
    junto à costura entre os dois lados (= centro da mesa física) */
 .apoiocol { display:flex; flex-direction:column; align-items:center; justify-content:flex-end; padding-bottom:2px; }
 .apoio { width:100%; flex:0 0 auto; border:2px solid rgba(255,255,255,.28); border-radius:4px 18px 4px 18px; background:rgba(255,255,255,.07); padding:6px; display:flex; flex-direction:column; align-items:center; gap:4px; }
 
-.benchrow { display:flex; gap:10px; justify-content:center; }
-/* fit-content: caixa abraça a carta (label "Pokémon Ativo" é mais larga que a
-   carta e esticava o bloco, desalinhando a borda) */
+/* coluna de batalha: banco no fundo, palco na frente (junto à costura) */
+.battlefield { display:flex; flex-direction:column; justify-content:space-between; min-width:0; gap:6px; }
+/* banco: equipe pequena aguardando, atrás do Ativo */
+.benchrow { display:flex; gap:8px; justify-content:center; }
+.benchrow .card, .benchrow .slot { width:calc(var(--cw) * .74); }
+.benchrow .hp { width:calc(var(--cw) * .74); }
+.benchrow .slot { opacity:.4; }
+.mat.bot .benchrow .slot { opacity:.25; }
 .base { border-radius:10px; padding:3px; background:rgba(255,255,255,.06); width:fit-content; margin:0 auto; display:flex; flex-direction:column; align-items:center; }
 .base.over { outline:2px solid var(--ok); background:rgba(87,194,107,.18); }
 /* slot destacado como alvo válido de pick inline */
@@ -82,22 +89,73 @@ body {
 @keyframes pickpulse { 0%,100% { outline-color:var(--ok); } 50% { outline-color:#a3e4b2; } }
 .slot { width:var(--cw); aspect-ratio:63/88; border:2px dashed var(--matline); border-radius:8px; background:rgba(255,255,255,.04); flex:none;
         display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:700; color:var(--matink); opacity:.8; text-align:center; padding:4px; }
-.activewrap { display:flex; justify-content:center; }
-.active .cardbox .card, .active .slot { width:calc(var(--cw) * 1.22); }
-/* spotlight do Ativo: brilho maior + halo radial no feltro escuro */
-.active .base { box-shadow:0 0 0 1px rgba(255,255,255,.28), 0 0 32px 6px rgba(180,195,255,.22); background:rgba(255,255,255,.07); }
-/* bot: ativo fica embaixo do banco — glow grande vazaria para cima */
-.mat.bot .active .base { box-shadow:0 0 0 1px rgba(255,255,255,.18); background:rgba(255,255,255,.07); }
-/* bot: slots vazios não têm fundo de carta — são informativos, não droppable */
-.mat.bot .base:has(.slot) { background:transparent; box-shadow:none; }
+
+/* ---- palco: Ativo em plataforma + HUD (composição diagonal do Game Boy) ---- */
+/* bot: HUD à esquerda, Pokémon à direita; jogador: espelhado */
+.stage { display:flex; align-items:center; justify-content:center; gap:clamp(18px, 6%, 72px); padding:0 4%; }
+.stage .cardbox .card, .stage .slot { width:calc(var(--cw) * 1.22); }
+/* stats na carta viram redundância — o HUD é a fonte visível */
+.stage .hp, .stage .sub, .stage .cond { display:none; }
+/* plataforma substitui o fundo de "base": o palco é o spotlight */
+.stage .base { background:transparent; padding:3px; }
+/* plataforma elíptica sob o Ativo, como nas batalhas clássicas */
+.platform-wrap { position:relative; z-index:0; padding-bottom:12px; }
+.platform-wrap::after {
+  content:''; position:absolute; left:50%; bottom:-2px; transform:translateX(-50%); z-index:-1;
+  width:160%; height:30px; border-radius:50%;
+  background:radial-gradient(ellipse at center, rgba(140,160,235,.32), rgba(140,160,235,.10) 58%, transparent 74%);
+  box-shadow:inset 0 0 0 1.5px rgba(170,185,255,.16);
+}
+.mat.you .platform-wrap::after {
+  background:radial-gradient(ellipse at center, rgba(245,205,120,.26), rgba(245,205,120,.08) 58%, transparent 74%);
+  box-shadow:inset 0 0 0 1.5px rgba(245,215,150,.16);
+}
+
+/* HUD de batalha (caixa de status do Game Boy, acabamento moderno) */
+.hud { min-width:180px; max-width:250px; background:rgba(9,12,28,.78); border:2px solid rgba(183,192,239,.5);
+       border-radius:12px 12px 12px 3px; padding:8px 12px; box-shadow:0 3px 0 rgba(0,0,0,.35); }
+.mat.you .hud { border-radius:12px 12px 3px 12px; border-color:rgba(245,205,120,.4); }
+.hud.empty { display:flex; align-items:center; justify-content:center; font-size:11px; opacity:.45; min-height:52px; }
+.hud-name { display:flex; justify-content:space-between; align-items:center; gap:8px; font-weight:800; font-size:13px; color:var(--txt); }
+.hud-hpline { display:flex; align-items:center; gap:6px; margin-top:6px; }
+.hud-hplabel { font-size:9px; font-weight:800; letter-spacing:1px; color:var(--accent); }
+.hud-bar { flex:1; height:8px; border-radius:4px; background:rgba(0,0,0,.55); border:1px solid rgba(255,255,255,.16); overflow:hidden; }
+.hud-bar i { display:block; height:100%; background:var(--ok); border-radius:3px; transition:width .3s ease-out, background .3s; }
+.hud-bar i.mid { background:#e3b62c; }
+.hud-bar i.low { background:#d6543f; }
+.hud-foot { display:flex; justify-content:space-between; align-items:center; margin-top:4px; min-height:15px; }
+.hud-hptxt { font-size:11px; font-weight:700; font-variant-numeric:tabular-nums; color:var(--txt); }
+.hud-attach { display:flex; align-items:center; flex-wrap:wrap; }
+
+/* HUD + menu de golpes empilhados */
+.hud-stack { display:flex; flex-direction:column; gap:6px; min-width:180px; max-width:250px; }
+.hud-stack .hud { min-width:0; max-width:none; }
+/* menu de golpes: caixa de movimentos do Game Boy sob o HUD do jogador */
+.movebox { background:rgba(9,12,28,.78); border:2px solid rgba(245,205,120,.4); border-radius:3px 12px 12px 12px;
+           padding:5px; display:flex; flex-direction:column; gap:3px; box-shadow:0 3px 0 rgba(0,0,0,.35); }
+.movebox .move { display:flex; align-items:center; gap:6px; width:100%; text-align:left;
+                 background:transparent; border:1px solid transparent; border-radius:7px; padding:5px 8px;
+                 color:var(--txt); font-size:12px; font-weight:700; cursor:pointer; }
+.movebox .move:hover { background:rgba(245,185,66,.16); border-color:var(--accent); }
+.movebox .move .move-name { flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.movebox .move .move-dmg { color:var(--accent); font-variant-numeric:tabular-nums; font-size:11px; }
+/* golpe sem energia suficiente: apagado, custo em cinza — clicável (motor arbitra) */
+.movebox .move.off { opacity:.42; }
+.movebox .move.off .btn-cost .edot { filter:grayscale(.8); }
+.movebox .move.off .move-dmg { color:var(--dim); }
+.movebox .move.off:hover { background:rgba(255,255,255,.05); border-color:var(--line); }
+.movebox .move.retreat { font-weight:600; color:var(--dim); }
+.movebox .move.retreat:hover { color:var(--txt); }
+.movebox .move-hint { color:var(--dim); font-size:11px; padding:4px 8px; }
 
 .cardbox { position:relative; display:inline-block; cursor:default; flex:none; }
-/* Cartas do bot ficam viradas para ele (realismo de mesa); o preview no hover
-   renderiza fora do tabuleiro e continua na orientação do jogador. */
-.mat.bot .cardbox .card { transform:rotate(180deg); }
 /* Pokémon entrando em jogo (setup, banco, evolução): pop de entrada. */
 @keyframes cardin { from { transform:scale(1.5); opacity:0; } }
-.fieldcol .cardbox { animation:cardin .3s ease-out; }
+.battlefield .cardbox { animation:cardin .3s ease-out; }
+/* idle sutil do Ativo: os dois Pokémon "respiram" encarando um ao outro */
+@keyframes idlefloat { 0%, 100% { transform:translate3d(0,0,0); } 50% { transform:translate3d(0,-3px,0); } }
+.stage .cardbox { animation:cardin .3s ease-out, idlefloat 4s ease-in-out .3s infinite; }
+.mat.bot .stage .cardbox { animation-delay:0s, 2.3s; }
 /* Energia recém-ligada: bolinha nasce com pop + brilho. */
 @keyframes edotin {
   0% { transform:scale(2.6); box-shadow:0 0 12px 5px rgba(255,240,150,.95); }
@@ -115,9 +173,8 @@ body {
 .cond { position:absolute; bottom:2px; left:2px; right:2px; text-align:center; }
 .cbadge { display:inline-block; font-size:10px; font-weight:800; letter-spacing:.5px; padding:1px 3px; border-radius:3px; color:#fff; margin:0 1px; box-shadow:0 1px 2px rgba(0,0,0,.4); }
 .sub { font-size:10px; text-align:center; color:var(--matink); margin-top:2px; font-weight:600; }
-/* HP visível sem abrir a carta */
+/* HP visível sem abrir a carta (banco; o Ativo usa o HUD) */
 .hp { width:var(--cw); margin:2px auto 0; }
-.active .hp { width:calc(var(--cw) * 1.22); }
 .hpbar { height:4px; border-radius:2px; background:rgba(0,0,0,.45); overflow:hidden; }
 .hpbar i { display:block; height:100%; background:var(--ok); border-radius:2px; transition:width .25s ease-out; }
 .hpbar i.mid { background:#e3b62c; }
@@ -240,8 +297,8 @@ button.primary { background:var(--accent); color:#1a1a1a; font-weight:700; borde
 .tooldot { display:inline-block; height:13px; border-radius:3px; background:#2b3352; border:1px solid rgba(255,255,255,.35); color:#fff; font-size:9px; font-weight:700; line-height:13px; text-align:center; margin:0 1px; padding:0 3px; vertical-align:middle; }
 
 @media (prefers-reduced-motion: reduce) {
-  .fieldcol .cardbox, .edot, .dmg, .base.picking { animation:none; transition:none; }
-  #handtray .card, .hpbar i, .pp, #preview { transition:none; }
+  .battlefield .cardbox, .stage .cardbox, .edot, .dmg, .base.picking { animation:none; transition:none; }
+  #handtray .card, .hpbar i, .hud-bar i, .prize, .pp, #preview { transition:none; }
 }
 
 /* ---- painel de preview no hover ---- */

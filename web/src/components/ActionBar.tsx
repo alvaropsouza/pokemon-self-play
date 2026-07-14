@@ -1,7 +1,22 @@
 import { useEffect, useState } from 'react'
-import type { GameState } from '../api'
+import type { CardView, GameState } from '../api'
 import type { Sel } from '../api'
 import { energyColor } from '../energy'
+
+// Custo pagável com as energias ligadas? Tipados casam por prefixo do nome EN
+// ("Fire Energy" paga Fire); Colorless aceita qualquer sobra.
+// ponytail: heurística visual — energias especiais que valem 2+ não são
+// interpretadas; o motor continua validando o ataque de verdade.
+function canPay(cost: string[] | null, energies: CardView[]): boolean {
+  if (!cost?.length) return true
+  const used = new Set<number>()
+  for (const t of cost.filter(c => c !== 'Colorless')) {
+    const i = energies.findIndex((e, idx) => !used.has(idx) && e.nameEN.startsWith(t))
+    if (i < 0) return false
+    used.add(i)
+  }
+  return energies.length - used.size >= cost.filter(c => c === 'Colorless').length
+}
 
 function TurnTimer({ turn, current }: { turn: number; current: number }) {
   const [sec, setSec] = useState(0)
@@ -37,6 +52,46 @@ const PHASE_LABEL: Record<string, string> = {
 type Post = (body: Record<string, unknown>) => void
 type SetSel = React.Dispatch<React.SetStateAction<Sel>>
 
+// Menu de golpes estilo Game Boy, renderizado abaixo do HUD do jogador (Mat).
+// Ataques + Recuar saem da barra inferior e vivem junto do Pokémon Ativo.
+export function AttackMenu({ s, sel, setSel, post }: {
+  s: GameState
+  sel: Sel
+  setSel: SetSel
+  post: Post
+}) {
+  const act = s.you.active
+  if (!act || s.phase !== 'turn' || s.current !== 0 || s.winner >= 0) return null
+  if (s.needPromote?.[0]) return null
+  if (sel?.kind === 'pending' || sel?.kind === 'retreating') return null
+
+  const firstTurn = s.turn === 1
+  return (
+    <div className="movebox">
+      {firstTurn
+        ? <span className="move-hint">Sem ataque no 1º turno</span>
+        : act.card.attacks?.map((a, i) => {
+            const payable = canPay(a.cost, act.energies ?? [])
+            return (
+              <button key={i} className={'move' + (payable ? '' : ' off')}
+                title={payable ? undefined : 'Energia insuficiente'}
+                onClick={() => post({ action: 'attack', attack: i })}>
+                <EnergyCost cost={a.cost} />
+                <span className="move-name">{a.name}</span>
+                <span className="move-dmg">{a.damage || 'efeito'}</span>
+              </button>
+            )
+          })}
+      {s.you.bench?.length ? (
+        <button className="move retreat" onClick={() => setSel({ kind: 'retreating', benchIdx: null, energyIdxs: [] })}>
+          <span className="move-name">Recuar</span>
+          <span className="move-dmg">{act.card.retreat || 'grátis'}</span>
+        </button>
+      ) : null}
+    </div>
+  )
+}
+
 export function ActionBar({ s, sel, setSel, err, post }: {
   s: GameState
   sel: Sel
@@ -49,10 +104,6 @@ export function ActionBar({ s, sel, setSel, err, post }: {
 
   const actions: React.ReactNode[] = []
 
-  // Botão de ação: ataque = primary, utilitário = secondary.
-  const attack = (label: React.ReactNode, fn: () => void, key: string) => (
-    <button key={key} className="primary" onClick={fn}>{label}</button>
-  )
   const util = (label: string, fn: () => void, key?: string) => (
     <button key={key ?? label} onClick={fn}>{label}</button>
   )
@@ -151,26 +202,7 @@ export function ActionBar({ s, sel, setSel, err, post }: {
       }
     }
 
-    if (s.you.active) {
-      // Turno 1: quem começa não pode atacar (regra CLAUDE.md §6).
-      const firstTurn = s.turn === 1 && myTurn
-      if (!firstTurn) {
-        s.you.active.card.attacks?.forEach((a, i) => {
-          actions.push(
-            attack(
-              <><EnergyCost cost={a.cost} />{a.name} ({a.damage || 'efeito'})</>,
-              () => post({ action: 'attack', attack: i }),
-              `attack-${i}`,
-            )
-          )
-        })
-      } else {
-        actions.push(<span key="no-atk" style={{ color: 'var(--dim)', fontSize: 11 }}>Sem ataque no 1º turno</span>)
-      }
-      if (s.you.bench?.length) {
-        actions.push(util('Recuar', () => setSel({ kind: 'retreating', benchIdx: null, energyIdxs: [] })))
-      }
-    }
+    // Ataques e Recuar vivem no AttackMenu, abaixo do HUD do Ativo (Mat).
   }
 
   return (

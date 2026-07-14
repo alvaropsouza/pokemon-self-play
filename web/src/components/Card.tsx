@@ -4,7 +4,7 @@ import { energyColor, energyImage } from '../energy'
 import { PreviewCtx } from '../preview'
 
 // Sigla + cor por condição especial (sem emoji — PRODUCT.md).
-const COND: Record<string, [string, string]> = {
+export const COND: Record<string, [string, string]> = {
   poisoned: ['PSN', '#7c4a8c'], burned: ['BRN', '#c04a36'], asleep: ['SLP', '#4a6a8c'],
   confused: ['CNF', '#b0507e'], paralyzed: ['PAR', '#a8862a'],
 }

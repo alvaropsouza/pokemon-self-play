@@ -5,7 +5,7 @@ import { cancelFlights, flyFromDeck } from './drawfx'
 import { CardPreview, PreviewCtx, type Preview } from './preview'
 import { Sidebar } from './components/Sidebar'
 import { BotMat, YouMat } from './components/Mat'
-import { ActionBar } from './components/ActionBar'
+import { ActionBar, AttackMenu } from './components/ActionBar'
 import { Card } from './components/Card'
 import { Drawer, type Pane } from './components/Drawer'
 
@@ -280,6 +280,7 @@ export default function App() {
           <BotMat side={s.bot} stadium={s.stadium} />
           <YouMat side={s.you} sel={sel} onSelect={select}
             dragBench={!!s.needPromote?.[0]}
+            menu={<AttackMenu s={s} sel={sel} setSel={setSel} post={post} />}
             pickMode={
               sel?.kind === 'pending' ? 'all'
               : (sel?.kind === 'retreating' && sel.benchIdx === null) ? 'bench'

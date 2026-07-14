@@ -1,6 +1,48 @@
-import type { CardView, SideView } from '../api'
+import type { CardView, PokemonView, SideView } from '../api'
 import type { Sel } from '../api'
-import { Card, DeckPile, DiscardPile, EmptySlot, PokemonSlot } from './Card'
+import { energyColor } from '../energy'
+import { COND, Card, DeckPile, DiscardPile, EmptySlot, PokemonSlot } from './Card'
+
+// HUD de batalha estilo Game Boy: nome, HP em barra colorida, condições,
+// energias e ferramenta do Pokémon Ativo. Substitui os overlays na carta.
+function BattleHud({ view }: { view: PokemonView | null | undefined }) {
+  if (!view) return <div className="hud empty">aguardando Pokémon</div>
+  const hp = view.card.hp
+  const rem = Math.max(0, hp - view.damage)
+  const pct = hp > 0 ? rem / hp : 0
+  const barCls = pct <= 0.25 ? 'low' : pct <= 0.5 ? 'mid' : ''
+  const energies = view.energies ?? []
+  return (
+    <div className="hud">
+      <div className="hud-name">
+        <span>{view.card.name}</span>
+        {view.conditions.length > 0 && (
+          <span>
+            {view.conditions.map(cd => {
+              const [tag, bg] = COND[cd] ?? [cd.slice(0, 3).toUpperCase(), '#555']
+              return <span key={cd} className="cbadge" style={{ background: bg }} title={cd}>{tag}</span>
+            })}
+          </span>
+        )}
+      </div>
+      {hp > 0 && (
+        <div className="hud-hpline">
+          <span className="hud-hplabel">HP</span>
+          <span className="hud-bar"><i className={barCls} style={{ width: `${pct * 100}%` }} /></span>
+        </div>
+      )}
+      <div className="hud-foot">
+        {hp > 0 && <span className="hud-hptxt">{rem}/{hp}</span>}
+        <span className="hud-attach">
+          {energies.map((e, i) => (
+            <span key={i} className="edot" title={e.name} style={{ background: energyColor(e.nameEN) }} />
+          ))}
+          {view.tool && <span className="tooldot" title={view.tool.name}>{view.tool.name.slice(0, 3).toUpperCase()}</span>}
+        </span>
+      </div>
+    </div>
+  )
+}
 
 function Bench({ side, isYou, sel, onSelect, onDropHand, dragBench, pickMode }: {
   side: SideView
@@ -23,7 +65,6 @@ function Bench({ side, isYou, sel, onSelect, onDropHand, dragBench, pickMode }: 
               onClick={isYou && b ? () => onSelect('bench', i) : undefined}
               onDropCard={onDropHand ? data => onDropHand(i, data) : undefined}
               dragData={dragBench && b ? `bench:${i}` : undefined}
-              placeholder={isYou ? '+ Pokémon' : undefined}
               selected={isYou && sel?.kind === 'bench' && sel.idx === i}
               picking={isPicking} />
           )
@@ -33,24 +74,33 @@ function Bench({ side, isYou, sel, onSelect, onDropHand, dragBench, pickMode }: 
   )
 }
 
-function ActiveSpot({ side, isYou, sel, onSelect, onDropHand, pickMode }: {
+// Palco de batalha: Ativo sobre plataforma elíptica + HUD ao lado, como na
+// tela de batalha do Game Boy (inimigo à direita-cima, jogador à esquerda-baixo).
+function Stage({ side, isYou, sel, onSelect, onDropHand, pickMode, menu }: {
   side: SideView
   isYou: boolean
   sel: Sel
   onSelect: (kind: 'active' | 'bench', idx: number) => void
   onDropHand?: (slot: number, data: string) => void
   pickMode?: 'all' | 'bench' | null
+  // menu de golpes (AttackMenu), renderizado abaixo do HUD do jogador
+  menu?: React.ReactNode
 }) {
   const isPicking = isYou && !!side.active && pickMode === 'all'
+  const slot = (
+    <div className="platform-wrap">
+      <PokemonSlot view={side.active}
+        onClick={isYou && side.active ? () => onSelect('active', -1) : undefined}
+        onDropCard={onDropHand ? data => onDropHand(-1, data) : undefined}
+        selected={isYou && sel?.kind === 'active'}
+        picking={isPicking} />
+    </div>
+  )
+  const hud = <div className="hud-stack"><BattleHud view={side.active} />{menu}</div>
+  // Bot: HUD à esquerda, Pokémon à direita. Jogador: espelhado.
   return (
-    <div className="activewrap active">
-      <div>
-        <PokemonSlot view={side.active}
-          onClick={isYou && side.active ? () => onSelect('active', -1) : undefined}
-          onDropCard={onDropHand ? data => onDropHand(-1, data) : undefined}
-          selected={isYou && sel?.kind === 'active'}
-          picking={isPicking} />
-      </div>
+    <div className={'stage ' + (isYou ? 'you' : 'bot')}>
+      {isYou ? <>{slot}{hud}</> : <>{hud}{slot}</>}
     </div>
   )
 }
@@ -70,16 +120,16 @@ function Piles({ side }: { side: SideView }) {
   )
 }
 
-// Metade do tabuleiro do bot: pilhas à esquerda, banco em cima do ativo,
-// Estádio (zona compartilhada) à direita.
+// Metade do bot: pilhas à esquerda, banco no fundo (topo da tela), Ativo em
+// plataforma na frente (junto à costura central); Estádio à direita.
 export function BotMat({ side, stadium }: { side: SideView; stadium?: CardView }) {
   const noop = () => {}
   return (
     <section className="mat bot">
       <Piles side={side} />
-      <div className="fieldcol">
+      <div className="battlefield">
         <Bench side={side} isYou={false} sel={null} onSelect={noop} />
-        <ActiveSpot side={side} isYou={false} sel={null} onSelect={noop} />
+        <Stage side={side} isYou={false} sel={null} onSelect={noop} />
       </div>
       <div className="apoiocol">
         <div className="apoio">
@@ -91,8 +141,9 @@ export function BotMat({ side, stadium }: { side: SideView; stadium?: CardView }
   )
 }
 
-// Metade do jogador: espelhada (ativo em cima do banco, pilhas à direita).
-export function YouMat({ side, sel, onSelect, onDropHand, dragBench, pickMode }: {
+// Metade do jogador: espelhada — Ativo na frente (junto à costura), banco no
+// fundo (base da tela), pilhas à direita.
+export function YouMat({ side, sel, onSelect, onDropHand, dragBench, pickMode, menu }: {
   side: SideView
   sel: Sel
   onSelect: (kind: 'active' | 'bench', idx: number) => void
@@ -100,11 +151,12 @@ export function YouMat({ side, sel, onSelect, onDropHand, dragBench, pickMode }:
   dragBench?: boolean
   // 'all' = ativo + banco destacados (pending target); 'bench' = só banco (retreating)
   pickMode?: 'all' | 'bench' | null
+  menu?: React.ReactNode
 }) {
   return (
     <section className="mat you">
-      <div className="fieldcol">
-        <ActiveSpot side={side} isYou sel={sel} onSelect={onSelect} onDropHand={onDropHand} pickMode={pickMode} />
+      <div className="battlefield">
+        <Stage side={side} isYou sel={sel} onSelect={onSelect} onDropHand={onDropHand} pickMode={pickMode} menu={menu} />
         <Bench side={side} isYou sel={sel} onSelect={onSelect} onDropHand={onDropHand} dragBench={dragBench} pickMode={pickMode} />
       </div>
       <Piles side={side} />
