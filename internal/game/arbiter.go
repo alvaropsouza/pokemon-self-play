@@ -2,13 +2,6 @@ package game
 
 import "fmt"
 
-// Helpers de arbitragem manual: aplicam efeitos de texto de cartas (ataques,
-// Treinadores, Habilidades) que o motor não interpreta automaticamente.
-// Todos registram no log e resolvem nocautes quando aplicável.
-
-// ApplyDamage aplica dano/contadores a um Pokémon do jogador p (efeitos de
-// carta). Não aplica Fraqueza/Resistência — "colocar contadores" as ignora;
-// para dano de ataque com F/R o cálculo já ocorre em Attack.
 func (g *Game) ApplyDamage(p, slot, amount int) error {
 	t, err := g.target(p, slot)
 	if err != nil {
@@ -20,7 +13,6 @@ func (g *Game) ApplyDamage(p, slot, amount int) error {
 	return nil
 }
 
-// Heal remove dano de um Pokémon do jogador p.
 func (g *Game) Heal(p, slot, amount int) error {
 	t, err := g.target(p, slot)
 	if err != nil {
@@ -34,9 +26,6 @@ func (g *Game) Heal(p, slot, amount int) error {
 	return nil
 }
 
-// SetCondition aplica uma Condição Especial ao Ativo do jogador p.
-// Adormecido/Confuso/Paralisado substituem a rotacional anterior;
-// Envenenado/Queimado coexistem.
 func (g *Game) SetCondition(p int, cond string) error {
 	ps := g.Players[p]
 	if ps.Active == nil {
@@ -59,8 +48,6 @@ func (g *Game) SetCondition(p int, cond string) error {
 	return nil
 }
 
-// DrawCards compra n cartas para o jogador p (efeito de carta; não é a compra
-// obrigatória — deck vazio aqui só interrompe, não perde).
 func (g *Game) DrawCards(p, n int) {
 	drawn := 0
 	for i := 0; i < n && g.drawCard(p); i++ {
@@ -69,15 +56,11 @@ func (g *Game) DrawCards(p, n int) {
 	g.logf("arbitragem: jogador %d compra %d carta(s)", p+1, drawn)
 }
 
-// ShuffleDeck embaralha o deck do jogador p (após busca, por exemplo).
 func (g *Game) ShuffleDeck(p int) {
 	g.shuffle(g.Players[p].Deck)
 	g.logf("arbitragem: deck do jogador %d embaralhado", p+1)
 }
 
-// SwitchActive troca o Ativo do jogador p com o Banco (efeito de carta como
-// Switch/Boss's Orders — sem custo de recuo). Remove Condições Especiais do
-// que sai.
 func (g *Game) SwitchActive(p, benchIdx int) error {
 	ps := g.Players[p]
 	if ps.Active == nil {

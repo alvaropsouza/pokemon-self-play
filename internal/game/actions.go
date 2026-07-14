@@ -6,11 +6,6 @@ import (
 	"github.com/alvaropsouza/pokemon-self-play/internal/cards"
 )
 
-// Ações do turno (seção 6 do CLAUDE.md). Todas validam limites e ordem;
-// efeitos de texto de Treinadores/Habilidades são resolvidos manualmente com
-// os helpers de arbitragem em arbiter.go.
-
-// AttachEnergy liga 1 Energia da mão a um Pokémon (Ativo ou Banco) — 1 por turno.
 func (g *Game) AttachEnergy(p, handIdx, slot int) error {
 	if err := g.requireTurn(p); err != nil {
 		return err
@@ -37,9 +32,6 @@ func (g *Game) AttachEnergy(p, handIdx, slot int) error {
 	return nil
 }
 
-// Evolve evolui um Pokémon em jogo com uma carta de evolução da mão.
-// Restrições: não no primeiro turno do jogador; não no turno em que o Pokémon
-// entrou em jogo; não duas vezes no mesmo turno.
 func (g *Game) Evolve(p, handIdx, slot int) error {
 	if err := g.requireTurn(p); err != nil {
 		return err
@@ -77,7 +69,6 @@ func (g *Game) Evolve(p, handIdx, slot int) error {
 	return nil
 }
 
-// AttachTool liga uma Ferramenta da mão a um Pokémon (1 Ferramenta por Pokémon).
 func (g *Game) AttachTool(p, handIdx, slot int) error {
 	if err := g.requireTurn(p); err != nil {
 		return err
@@ -102,8 +93,6 @@ func (g *Game) AttachTool(p, handIdx, slot int) error {
 	return nil
 }
 
-// checkDiscardCost valida custo "only if you discard N other cards from your
-// hand": a mão (fora a própria carta) precisa ter ao menos N cartas.
 func (g *Game) checkDiscardCost(p int, c *cards.Card) error {
 	for _, op := range CompileEffect(c.Effect.EN).Ops {
 		if op.Kind == OpDiscardFromHand && op.Cost && len(g.Players[p].Hand)-1 < op.N {
@@ -113,8 +102,6 @@ func (g *Game) checkDiscardCost(p int, c *cards.Card) error {
 	return nil
 }
 
-// PlayItem joga um Item: sem limite por turno; a carta vai para o descarte.
-// O efeito do texto é resolvido manualmente.
 func (g *Game) PlayItem(p, handIdx int) error {
 	if err := g.requireTurn(p); err != nil {
 		return err
@@ -139,8 +126,6 @@ func (g *Game) PlayItem(p, handIdx int) error {
 	return nil
 }
 
-// PlaySupporter joga um Suporte: 1 por turno; proibido para quem começa no
-// turno 1. A carta vai para o descarte; efeito manual.
 func (g *Game) PlaySupporter(p, handIdx int) error {
 	if err := g.requireTurn(p); err != nil {
 		return err
@@ -173,8 +158,6 @@ func (g *Game) PlaySupporter(p, handIdx int) error {
 	return nil
 }
 
-// PlayStadium joga um Estádio: 1 por turno; substitui o atual (descartado);
-// proibido jogar Estádio com o mesmo nome do que já está em jogo.
 func (g *Game) PlayStadium(p, handIdx int) error {
 	if err := g.requireTurn(p); err != nil {
 		return err
@@ -204,9 +187,6 @@ func (g *Game) PlayStadium(p, handIdx int) error {
 	return nil
 }
 
-// Retreat recua o Ativo: 1 vez por turno; descarta as Energias indicadas
-// (têm que somar o custo de Recuo); troca com o Pokémon do Banco em benchIdx.
-// Adormecido/Paralisado não recuam. Recuar remove Condições Especiais.
 func (g *Game) Retreat(p, benchIdx int, energyIdxs []int) error {
 	if err := g.requireTurn(p); err != nil {
 		return err
@@ -240,7 +220,6 @@ func (g *Game) Retreat(p, benchIdx int, energyIdxs []int) error {
 	return nil
 }
 
-// discardEnergies descarta as Energias nos índices dados (de t.Energies).
 func (g *Game) discardEnergies(p int, t *PokemonInPlay, idxs []int) error {
 	seen := map[int]bool{}
 	for _, i := range idxs {
@@ -261,7 +240,6 @@ func (g *Game) discardEnergies(p int, t *PokemonInPlay, idxs []int) error {
 	return nil
 }
 
-// Promote promove um Pokémon do Banco para Ativo após nocaute.
 func (g *Game) Promote(p, benchIdx int) error {
 	if g.Phase != PhaseTurn || !g.NeedPromote[p] {
 		return fmt.Errorf("jogador %d não tem promoção pendente", p+1)
@@ -277,8 +255,6 @@ func (g *Game) Promote(p, benchIdx int) error {
 	return nil
 }
 
-// EndTurn passa o turno sem atacar: roda o Pokémon Checkup e inicia o turno
-// do oponente (com a compra obrigatória — deck-out encerra a partida).
 func (g *Game) EndTurn(p int) error {
 	if err := g.requireTurn(p); err != nil {
 		return err
@@ -287,7 +263,6 @@ func (g *Game) EndTurn(p int) error {
 	return nil
 }
 
-// finishTurn: checkup entre turnos, troca de jogador, compra obrigatória.
 func (g *Game) finishTurn() {
 	ps := g.Players[g.Current]
 	ps.TurnsTaken++
@@ -307,7 +282,6 @@ func (g *Game) finishTurn() {
 	g.mandatoryDraw(g.Current)
 }
 
-// mandatoryDraw é a compra obrigatória do início do turno; deck vazio = deck-out.
 func (g *Game) mandatoryDraw(p int) {
 	if !g.drawCard(p) {
 		g.logf("jogador %d não pode comprar: deck-out", p+1)

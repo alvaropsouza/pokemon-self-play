@@ -4,66 +4,57 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-
-	"github.com/alvaropsouza/pokemon-self-play/internal/cards"
 )
 
-// Efeitos de texto: o texto EN da carta é compilado uma única vez em uma lista
-// de operações primitivas (Op). Cobertura total obrigatória: se qualquer
-// cláusula do texto não casar com um padrão conhecido, o efeito inteiro é
-// marcado Manual e cai na arbitragem manual — nunca há resolução parcial.
-
-// OpKind identifica a operação primitiva. String para serialização estável
-// em data/effects.json (banco de efeitos preenchido por LLM/humano).
+// OpKind identifies a primitive operation. String for stable serialization in data/effects.json.
 type OpKind string
 
 const (
-	OpDraw               OpKind = "draw"                  // compra N cartas (jogador do efeito)
-	OpDrawUntil          OpKind = "draw_until"            // compra até ter N na mão
-	OpDrawOrMore         OpKind = "draw_or_more"          // compra N, mas se exatamente ExactPrizes prêmios → compra Alt
-	OpDiscardHand        OpKind = "discard_hand"          // descarta a mão inteira
-	OpShuffleHandBoth    OpKind = "shuffle_hand_both"     // ambos embaralham a mão no deck (Tools inclui ferramentas)
-	OpShuffleHandSelf    OpKind = "shuffle_hand_self"     // embaralha a própria mão no deck
-	OpDrawBoth           OpKind = "draw_both"             // ambos compram N
-	OpDrawPerPrizeBoth   OpKind = "draw_per_prize_both"   // ambos compram = prêmios restantes
-	OpDamageOppBench     OpKind = "damage_opp_bench"      // N de dano em cada Pokémon do Banco do oponente
-	OpDamageSelfBench    OpKind = "damage_self_bench"     // N de dano em cada Pokémon do Banco próprio
-	OpHealSelf           OpKind = "heal_self"             // cura N do atacante
-	OpDiscardSelfEnergy  OpKind = "discard_self_energy"   // descarta N Energias do atacante (N=-1 → todas)
-	OpScalePerEnergySelf OpKind = "scale_per_energy_self" // +N de dano por Energia no atacante (pré-dano)
-	OpScalePerEnergyOpp  OpKind = "scale_per_energy_opp"  // +N de dano por Energia no Ativo do oponente
-	OpStatus             OpKind = "status"                // Condição Especial (Cond) no Ativo do alvo
-	OpSearch             OpKind = "search"                // busca no deck (Find/Dest/N) — escolha do jogador
-	OpShuffleDeck        OpKind = "shuffle_deck"          // embaralha o próprio deck
-	OpSwitchSelf         OpKind = "switch_self"           // troca o próprio Ativo com um do Banco (escolha)
-	OpSwitchOpp          OpKind = "switch_opp"            // força oponente a trazer Pokémon do Banco (atacante escolhe qual)
-	OpDiscardOppEnergy   OpKind = "discard_opp_energy"    // descarta N Energias do Ativo do oponente (N=-1 → todas)
-	OpDamageSelf         OpKind = "damage_self"           // coloca N de dano no próprio Ativo (recuo/recoil)
-	OpDiscardFromHand    OpKind = "discard_from_hand"     // descarta N cartas da mão (escolha do jogador)
+	OpDraw               OpKind = "draw"
+	OpDrawUntil          OpKind = "draw_until"
+	OpDrawOrMore         OpKind = "draw_or_more"
+	OpDiscardHand        OpKind = "discard_hand"
+	OpShuffleHandBoth    OpKind = "shuffle_hand_both"
+	OpShuffleHandSelf    OpKind = "shuffle_hand_self"
+	OpDrawBoth           OpKind = "draw_both"
+	OpDrawPerPrizeBoth   OpKind = "draw_per_prize_both"
+	OpDamageOppBench     OpKind = "damage_opp_bench"
+	OpDamageSelfBench    OpKind = "damage_self_bench"
+	OpHealSelf           OpKind = "heal_self"
+	OpDiscardSelfEnergy  OpKind = "discard_self_energy"
+	OpScalePerEnergySelf OpKind = "scale_per_energy_self"
+	OpScalePerEnergyOpp  OpKind = "scale_per_energy_opp"
+	OpStatus             OpKind = "status"
+	OpSearch             OpKind = "search"
+	OpShuffleDeck        OpKind = "shuffle_deck"
+	OpSwitchSelf         OpKind = "switch_self"
+	OpSwitchOpp          OpKind = "switch_opp"
+	OpDiscardOppEnergy   OpKind = "discard_opp_energy"
+	OpDamageSelf         OpKind = "damage_self"
+	OpDiscardFromHand    OpKind = "discard_from_hand"
 )
 
-// Op é uma operação primitiva compilada do texto do efeito.
+// Op is a compiled primitive operation from effect text.
 type Op struct {
 	Kind        OpKind `json:"kind"`
 	N           int    `json:"n,omitempty"`
-	Alt         int    `json:"alt,omitempty"`          // OpDrawOrMore: compras alternativas
-	ExactPrizes int    `json:"exactPrizes,omitempty"` // OpDrawOrMore: condição de prêmios
-	Cond        string `json:"cond,omitempty"`         // condição especial (OpStatus)
-	OnSelf      bool   `json:"onSelf,omitempty"`       // OpStatus: alvo é o próprio Ativo (senão, o do oponente)
-	Flip        bool   `json:"flip,omitempty"`         // executa só se a moeda der cara
-	Tools       bool   `json:"tools,omitempty"`        // OpShuffleHandBoth: ferramentas voltam ao deck também
-	Cost        bool   `json:"cost,omitempty"`         // OpDiscardFromHand: custo obrigatório ("only if") — bloqueia jogar sem N cartas
-	Dest        string `json:"dest,omitempty"`         // OpSearch: "hand" | "bench"
-	Find        []Find `json:"find,omitempty"`         // OpSearch: critérios (casa qualquer um)
+	Alt         int    `json:"alt,omitempty"`
+	ExactPrizes int    `json:"exactPrizes,omitempty"`
+	Cond        string `json:"cond,omitempty"`
+	OnSelf      bool   `json:"onSelf,omitempty"`
+	Flip        bool   `json:"flip,omitempty"`
+	Tools       bool   `json:"tools,omitempty"`
+	Cost        bool   `json:"cost,omitempty"`
+	Dest        string `json:"dest,omitempty"`
+	Find        []Find `json:"find,omitempty"`
 }
 
-// CompiledEffect é o resultado da compilação do texto de um efeito.
+// CompiledEffect is the result of compiling effect text.
 type CompiledEffect struct {
 	Ops    []Op `json:"ops,omitempty"`
-	Manual bool `json:"manual,omitempty"` // cláusula não coberta → arbitragem manual integral
+	Manual bool `json:"manual,omitempty"`
 }
 
-// pattern casa uma parte de cláusula e produz zero ou mais Ops.
 type pattern struct {
 	re    *regexp.Regexp
 	build func(m []string) []Op
@@ -73,8 +64,7 @@ func atoi(s string) int { n, _ := strconv.Atoi(s); return n }
 
 var condAlt = `(asleep|confused|paralyzed|poisoned|burned)`
 
-// Ordem importa: padrões mais específicos primeiro (spans casados são removidos
-// da cláusula antes dos padrões seguintes).
+// patterns must be ordered most-specific first; matched spans are removed before subsequent patterns run.
 var patterns = []pattern{
 	{regexp.MustCompile(`each player shuffles their hand (?:and shuffles it )?into (?:the bottom of )?their deck and draws (\d+) cards?`), func(m []string) []Op {
 		return []Op{{Kind: OpShuffleHandBoth}, {Kind: OpDrawBoth, N: atoi(m[1])}}
@@ -85,8 +75,6 @@ var patterns = []pattern{
 	{regexp.MustCompile(`each player draws a card for each of their remaining prize cards?`), func(m []string) []Op {
 		return []Op{{Kind: OpDrawPerPrizeBoth}}
 	}},
-	// "draws a card for each of their remaining prize cards" — continuação inline
-	// de "each player shuffles … and draws …" (ex: Iono).
 	{regexp.MustCompile(`draws a cards? for each of their remaining prize cards?`), func(m []string) []Op {
 		return []Op{{Kind: OpDrawPerPrizeBoth}}
 	}},
@@ -175,14 +163,10 @@ var patterns = []pattern{
 	}},
 }
 
-// reConditionalInstead casa "if you have exactly N prize cards remaining, draw M cards instead"
-// (cláusula condicional que sobrescreve o draw base da cláusula anterior).
 var reConditionalInstead = regexp.MustCompile(
 	`if you have exactly (\d+) prize cards? remaining,\s*draw (\d+) cards? instead`,
 )
 
-// buildSearch monta a op de busca; alternativas não reconhecidas → nil (a
-// cláusula fica sem cobertura e o efeito cai em Manual).
 func buildSearch(count, list, dest string) []Op {
 	finds := parseFinds(list)
 	if finds == nil {
@@ -195,20 +179,14 @@ func buildSearch(count, list, dest string) []Op {
 	return []Op{{Kind: OpSearch, N: n, Dest: dest, Find: finds}}
 }
 
-// símbolo de energia do TCGdex ({f}, {w}...) → nome do tipo.
 var symbolType = map[string]string{
 	"g": "Grass", "r": "Fire", "w": "Water", "l": "Lightning", "p": "Psychic",
 	"f": "Fighting", "d": "Darkness", "m": "Metal", "n": "Dragon", "c": "Colorless",
 }
 
 var reFindAlt = regexp.MustCompile(`^(?:an? )?(basic )?(?:\{(\w)\} )?(pokemon|energy)(?: cards?)?$`)
-
-// reHPSuffix: "… with N hp or less" no fim da lista de busca. Extraído ANTES do
-// split por " or " (o "or" de "or less" quebraria as alternativas).
 var reHPSuffix = regexp.MustCompile(` with (\d+) hp or less$`)
 
-// parseFinds interpreta a lista de alternativas ("a basic {f} energy card or a
-// basic {f} pokemon"). Qualquer alternativa não reconhecida → nil.
 func parseFinds(list string) []Find {
 	maxHP := 0
 	if m := reHPSuffix.FindStringSubmatch(list); m != nil {
@@ -230,7 +208,6 @@ func parseFinds(list string) []Find {
 			}
 			f.MaxHP = maxHP
 		case "energy":
-			// Só Energia Básica é suportada ("basic ... energy"); HP não se aplica.
 			if m[1] == "" || maxHP > 0 {
 				return nil
 			}
@@ -241,18 +218,13 @@ func parseFinds(list string) []Find {
 	return finds
 }
 
-// reFiller: sobras aceitáveis entre spans casados (conectivos e pontuação).
 var reFiller = regexp.MustCompile(`^[\s,]*(?:and|then|also|afterwards?)?[\s,]*$`)
-
-// reParen remove texto entre parênteses (lembretes de regra, não mecânica).
 var reParen = regexp.MustCompile(`\([^)]*\)`)
 
 var effectCache = map[string]CompiledEffect{}
 
-// CompileEffect compila texto EN de efeito em ops. Ordem: compilador regex
-// (offline puro) → banco de efeitos (data/effects.json, preenchido por
-// LLM/humano via cmd/compile-effects) → Manual. Cache por texto — motor
-// single-threaded, sem lock.
+// CompileEffect compiles EN effect text into ops.
+// Order: regex compiler → effects.json DB → Manual. Cached per text (single-threaded engine, no lock).
 func CompileEffect(text string) CompiledEffect {
 	if text == "" {
 		return CompiledEffect{}
@@ -272,7 +244,7 @@ func CompileEffect(text string) CompiledEffect {
 
 func compile(text string) CompiledEffect {
 	low := strings.ToLower(text)
-	low = strings.ReplaceAll(low, "é", "e") // pokémon → pokemon
+	low = strings.ReplaceAll(low, "é", "e")
 	low = reParen.ReplaceAllString(low, "")
 
 	var ops []Op
@@ -293,9 +265,8 @@ func compile(text string) CompiledEffect {
 			flipNext = false
 		}
 
-		// Cláusula condicional "instead": checar ANTES do loop de padrões para
-		// evitar que draw (\d+) consuma o "draw M" interno antes da regex ver a
-		// cláusula inteira.
+		// check "instead" conditional before pattern loop — prevents draw(\d+) consuming
+		// the inner "draw M" before reConditionalInstead sees the full clause
 		if m := reConditionalInstead.FindStringSubmatch(clause); m != nil {
 			for i := len(ops) - 1; i >= 0; i-- {
 				if ops[i].Kind == OpDraw {
@@ -319,12 +290,11 @@ func compile(text string) CompiledEffect {
 			}
 			built := pat.build(m)
 			if built == nil {
-				continue // padrão casou mas conteúdo não é suportado — não consome
+				continue
 			}
 			ops = append(ops, built...)
 			clause = strings.Replace(clause, m[0], " ", 1)
 		}
-		// Cobertura total: sobra não trivial na cláusula → efeito manual.
 		if !reFiller.MatchString(clause) {
 			return CompiledEffect{Manual: true}
 		}
@@ -335,231 +305,7 @@ func compile(text string) CompiledEffect {
 		}
 	}
 	if flipNext {
-		// "flip a coin" sem "if heads" coberto → manual.
 		return CompiledEffect{Manual: true}
 	}
 	return CompiledEffect{Ops: ops}
-}
-
-// ExtraAttackDamage soma modificadores de dano por contagem de Energia.
-func ExtraAttackDamage(g *Game, p int, atk cards.Attack, attacker *PokemonInPlay) int {
-	ce := CompileEffect(atk.Effect.EN)
-	extra := 0
-	for _, op := range ce.Ops {
-		if op.Flip {
-			continue // flip-conditional scaling roda em runOps com moeda real
-		}
-		switch op.Kind {
-		case OpScalePerEnergySelf:
-			extra += op.N * len(attacker.Energies)
-		case OpScalePerEnergyOpp:
-			if opp := g.Players[1-p].Active; opp != nil {
-				extra += op.N * len(opp.Energies)
-			}
-		}
-	}
-	return extra
-}
-
-// applyTrainerEffect resolve efeitos de Treinador compilados.
-// Retorna true se totalmente resolvido; false = arbitragem manual.
-func (g *Game) applyTrainerEffect(p int, c *cards.Card) bool {
-	ce := CompileEffect(c.Effect.EN)
-	if ce.Manual {
-		return false
-	}
-	g.runOps(p, ce.Ops, nil)
-	return true
-}
-
-// applyAttackEffect resolve efeitos de ataque após o dano principal.
-// attacker = Ativo do atacante capturado antes de qualquer nocaute.
-// Não chama resolveKnockouts — o chamador resolve uma vez ao final.
-func (g *Game) applyAttackEffect(p int, atk cards.Attack, attacker *PokemonInPlay) {
-	if atk.Effect.EN == "" {
-		return
-	}
-	ce := CompileEffect(atk.Effect.EN)
-	// ponytail: ops que criam escolha pendente em ataque ficam manual — a
-	// escolha precisaria ser resolvida ANTES de finishTurn; Treinadores cobrem.
-	for _, op := range ce.Ops {
-		if op.Kind == OpSearch || op.Kind == OpSwitchSelf || op.Kind == OpSwitchOpp || op.Kind == OpDiscardFromHand {
-			ce = CompiledEffect{Manual: true}
-			break
-		}
-	}
-	if ce.Manual {
-		g.logf("efeito de %s (arbitragem manual): %s", atk.Name.EN, atk.Effect.EN)
-		return
-	}
-	g.runOps(p, ce.Ops, attacker)
-}
-
-// runOps executa ops compiladas para o jogador p. attacker é o Ativo do
-// atacante em efeitos de ataque (nil em Treinadores — textos de Treinador não
-// produzem ops que dependem do atacante). Uma op de busca pode interromper a
-// execução (escolha pendente); as ops restantes continuam em ResolveChoice.
-func (g *Game) runOps(p int, ops []Op, attacker *PokemonInPlay) {
-	for i, op := range ops {
-		if op.Flip {
-			if !g.flip() {
-				g.logf("coroa: efeito não acontece")
-				continue
-			}
-			g.logf("cara: efeito acontece")
-		}
-		switch op.Kind {
-		case OpDraw:
-			g.DrawCards(p, op.N)
-		case OpDrawOrMore:
-			n := op.N
-			if op.ExactPrizes > 0 && len(g.Players[p].Prizes) == op.ExactPrizes {
-				n = op.Alt
-				g.logf("jogador %d: condição (%d prêmios) → compra %d", p+1, op.ExactPrizes, n)
-			}
-			g.DrawCards(p, n)
-		case OpShuffleHandSelf:
-			g.shuffleHandIntoDeck(p, false)
-			g.logf("jogador %d: embaralha a mão no deck", p+1)
-		case OpDrawUntil:
-			for len(g.Players[p].Hand) < op.N && g.drawCard(p) {
-			}
-			g.logf("jogador %d: compra até ter %d na mão", p+1, op.N)
-		case OpDiscardHand:
-			ps := g.Players[p]
-			ps.Discard = append(ps.Discard, ps.Hand...)
-			ps.Hand = nil
-			g.logf("jogador %d: descarta a mão", p+1)
-		case OpShuffleHandBoth:
-			for i := 0; i < 2; i++ {
-				g.shuffleHandIntoDeck(i, op.Tools)
-			}
-			g.logf("ambos embaralham a mão no deck")
-		case OpDrawBoth:
-			for i := 0; i < 2; i++ {
-				g.DrawCards(i, op.N)
-			}
-		case OpDrawPerPrizeBoth:
-			for i := 0; i < 2; i++ {
-				g.DrawCards(i, len(g.Players[i].Prizes))
-			}
-		case OpDamageOppBench:
-			for _, b := range g.Players[1-p].Bench {
-				b.Damage += op.N
-			}
-			g.logf("dano de %d em cada Pokémon do Banco do oponente", op.N)
-		case OpDamageSelfBench:
-			for _, b := range g.Players[p].Bench {
-				b.Damage += op.N
-			}
-			g.logf("dano de %d em cada Pokémon do Banco próprio", op.N)
-		case OpHealSelf:
-			if attacker == nil {
-				break
-			}
-			attacker.Damage -= op.N
-			if attacker.Damage < 0 {
-				attacker.Damage = 0
-			}
-			g.logf("cura %d de %s", op.N, g.Card(attacker.TopID()).Name.EN)
-		case OpDiscardSelfEnergy:
-			if attacker == nil {
-				break
-			}
-			n := op.N
-			if n < 0 || n > len(attacker.Energies) {
-				n = len(attacker.Energies)
-			}
-			ids := make([]int, n)
-			for i := range ids {
-				ids[i] = i
-			}
-			_ = g.discardEnergies(p, attacker, ids)
-			g.logf("descarta %d Energia(s) de %s", n, g.Card(attacker.TopID()).Name.EN)
-		case OpScalePerEnergySelf, OpScalePerEnergyOpp:
-			// Modificadores de dano — aplicados antes, em ExtraAttackDamage.
-		case OpSearch:
-			if g.startSearch(p, op, ops[i+1:]) {
-				return // pendente: restante roda em ResolveChoice
-			}
-			return // auto-resolvida: startSearch já rodou o restante
-		case OpSwitchSelf:
-			g.startSwitchPending(p, false, ops[i+1:])
-			return // pendente ou auto-resolvida: restante já tratado
-		case OpSwitchOpp:
-			g.startSwitchPending(p, true, ops[i+1:])
-			return
-		case OpDiscardFromHand:
-			g.startDiscardHand(p, op, ops[i+1:])
-			return
-		case OpDiscardOppEnergy:
-			opp := 1 - p
-			if a := g.Players[opp].Active; a != nil {
-				n := op.N
-				if n < 0 || n > len(a.Energies) {
-					n = len(a.Energies)
-				}
-				idxs := make([]int, n)
-				for j := range idxs {
-					idxs[j] = j
-				}
-				_ = g.discardEnergies(opp, a, idxs)
-				g.logf("descarta %d Energia(s) do Ativo do oponente", n)
-			}
-		case OpDamageSelf:
-			if attacker != nil {
-				attacker.Damage += op.N
-				g.logf("%s recebe %d de dano (recoil)", g.Card(attacker.TopID()).Name.EN, op.N)
-			}
-		case OpShuffleDeck:
-			g.shuffle(g.Players[p].Deck)
-			g.logf("jogador %d: embaralha o deck", p+1)
-		case OpStatus:
-			target := 1 - p
-			if op.OnSelf {
-				target = p
-			}
-			g.applyStatusToActive(target, op.Cond)
-		}
-	}
-}
-
-// shuffleHandIntoDeck devolve a mão (e opcionalmente ferramentas) ao deck e embaralha.
-func (g *Game) shuffleHandIntoDeck(p int, includeTools bool) {
-	ps := g.Players[p]
-	// append em slice novo: usar ps.Hand como base escreveria no array da mão,
-	// que pode ser compartilhado com outras zonas.
-	ps.Deck = append(append([]string(nil), ps.Hand...), ps.Deck...)
-	ps.Hand = nil
-	if includeTools {
-		all := append([]*PokemonInPlay{ps.Active}, ps.Bench...)
-		for _, pk := range all {
-			if pk != nil && pk.Tool != "" {
-				ps.Deck = append(ps.Deck, pk.Tool)
-				pk.Tool = ""
-			}
-		}
-	}
-	g.shuffle(ps.Deck)
-}
-
-func (g *Game) applyStatusToActive(p int, status string) {
-	a := g.Players[p].Active
-	if a == nil {
-		return
-	}
-	name := g.Card(a.TopID()).Name.EN
-	switch status {
-	case "asleep":
-		a.Rot = CondAsleep
-	case "confused":
-		a.Rot = CondConfused
-	case "paralyzed":
-		a.Rot = CondParalyzed
-	case "poisoned":
-		a.Poisoned = true
-	case "burned":
-		a.Burned = true
-	}
-	g.logf("%s está %s", name, status)
 }
