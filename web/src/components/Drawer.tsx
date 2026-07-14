@@ -36,7 +36,7 @@ function ArbPane({ post }: { post: (body: Record<string, unknown>) => void }) {
           <option value={-1}>Ativo</option>
           {[0, 1, 2, 3, 4].map(i => <option key={i} value={i}>Banco {i + 1}</option>)}
         </select>
-        <input type="number" value={amount} step={10} onChange={e => setAmount(+e.target.value)} />
+        <input type="number" value={amount} step={10} min={10} max={9999} onChange={e => setAmount(Math.max(10, Math.min(9999, +e.target.value)))} />
       </div>
       <div className="row">
         <button type="button" onClick={() => arb('arb_damage')}>Dano</button>

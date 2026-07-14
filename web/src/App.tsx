@@ -9,6 +9,14 @@ import { AttackMenu, ContextBar, PHASE_LABEL, TurnTimer } from './components/Act
 import { Card } from './components/Card'
 import { Drawer, type Pane } from './components/Drawer'
 
+function netErr(e: unknown): string {
+  const msg = String(e)
+  if (msg.includes('Failed to fetch') || msg.includes('NetworkError') || msg.includes('ERR_CONNECTION')) {
+    return 'Servidor indisponível. Verifique se o servidor está rodando.'
+  }
+  return msg
+}
+
 function useFocusTrap(ref: RefObject<HTMLElement | null>, active = true) {
   useEffect(() => {
     if (!active) return
@@ -183,6 +191,14 @@ function DeckMenu({ decks, sel, setSel, who, onView }: {
   onView: (d: DeckInfo) => void
 }) {
   const [q, setQ] = useState('')
+  if (!decks.length) {
+    return (
+      <section className={`lobby-side deckshow ${who}`}>
+        <h2>{who === 'you' ? 'Você' : 'Bot'}</h2>
+        <div className="dk-none">Nenhum deck disponível. Importe sets com <code>task import</code>.</div>
+      </section>
+    )
+  }
   const d = decks.find(dk => dk.id === sel) ?? decks[0]
   const col = energyColor(d.type)
   const cover = d.star.image ? hiresImage(d.star.image) : cardImg(d.star)
@@ -309,7 +325,7 @@ function LobbyScreen({ onStart, err }: { onStart: (c: GameConfig) => void; err: 
       const at = (t: string) => ds.find(d => d.type === t)?.id ?? ds[0]?.id ?? ''
       setMyId(at('Fire'))
       setBotId(at('Water'))
-    }).catch(e => setLoadErr(String(e)))
+    }).catch(e => setLoadErr(netErr(e)))
   }, [])
 
   return (
@@ -328,7 +344,8 @@ function LobbyScreen({ onStart, err }: { onStart: (c: GameConfig) => void; err: 
           </div>
         )}
         {err && <div className="lobby-err">{err}</div>}
-        <button className="primary lobby-start" disabled={!decks}
+        <button type="button" className="primary lobby-start"
+          disabled={!decks || !myId || !botId}
           onClick={() => decks && onStart({ mytype: myId, bottype: botId })}>
           Iniciar partida
         </button>
@@ -369,16 +386,18 @@ function ChoiceOverlay({ pc, post }: {
       <div className="winner-box choice-box" role="dialog" aria-modal="true" aria-label={title} ref={boxRef}>
         <div className="choice-title">{title}</div>
         <div className="choice-cards">
-          {pc.candidates.map((c, i) => (
-            <Card key={i} view={c} selected={picks.includes(i)} onClick={() => toggle(i)} />
-          ))}
+          {pc.candidates.length === 0
+            ? <p className="dk-none">Nenhuma carta disponível.</p>
+            : pc.candidates.map((c, i) => (
+                <Card key={i} view={c} selected={picks.includes(i)} onClick={() => toggle(i)} />
+              ))}
         </div>
         <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
-          <button className="primary" onClick={confirm} disabled={needMore}>
+          <button type="button" className="primary" onClick={confirm} disabled={needMore && pc.candidates.length > 0}>
             {isSwitch ? 'Confirmar' : `Confirmar (${picks.length})`}
           </button>
           {!isSwitch && !isDiscard && (
-            <button onClick={skip}>Não pegar nada</button>
+            <button type="button" onClick={skip}>Não pegar nada</button>
           )}
         </div>
       </div>
@@ -408,6 +427,7 @@ export default function App() {
   const [s, setS] = useState<GameState | null>(null)
   const [config, setConfig] = useState<GameConfig>({ mytype: 'Fire', bottype: 'Water' })
   const [lobbyErr, setLobbyErr] = useState('')
+  const [connectErr, setConnectErr] = useState('')
   const [sel, setSel] = useState<Sel>(null)
   const [err, setErr] = useState('')
   const [errN, setErrN] = useState(0) // nonce: mesmo erro repetido gera novo toast
@@ -416,7 +436,13 @@ export default function App() {
   const publishPreview = useCallback((c: CardView | null, rect?: DOMRect) =>
     setPreview(c && rect ? { card: c, rect } : null), [])
 
-  useEffect(() => { fetchState().then(setS).catch(() => {}) }, [])
+  useEffect(() => {
+    fetchState().then(setS).catch(e => {
+      // 404 = sem partida em andamento → ir para o lobby normalmente
+      if (String(e).includes('404') || String(e).includes('HTTP 404')) return
+      setConnectErr(netErr(e))
+    })
+  }, [])
 
   // Escape fecha a gaveta lateral (log/arbitragem/config).
   useEffect(() => {
@@ -438,7 +464,7 @@ export default function App() {
         setSel(null)
         setErr('')
       }
-    }).catch(e => setLobbyErr(String(e)))
+    }).catch(e => setLobbyErr(netErr(e)))
   }, [])
 
   const post = useCallback((body: Record<string, unknown>) => {
@@ -449,7 +475,7 @@ export default function App() {
       // (mantém o tabuleiro visível em vez de crashar no render).
       if (j.phase) setS(j)
       setSel(null)
-    }).catch(e => setErr(String(e)))
+    }).catch(e => setErr(netErr(e)))
   }, [])
 
   const select = useCallback((kind: 'hand' | 'active' | 'bench', idx: number) => {
@@ -478,6 +504,15 @@ export default function App() {
       return { kind, idx }
     })
   }, [sel, post])
+
+  if (connectErr) {
+    return (
+      <div style={{ display:'flex', alignItems:'center', justifyContent:'center', height:'100vh', flexDirection:'column', gap:16 }}>
+        <div className="lobby-err" role="alert">{connectErr}</div>
+        <button type="button" className="primary" onClick={() => window.location.reload()}>Recarregar</button>
+      </div>
+    )
+  }
 
   if (!s || s.phase === 'lobby') {
     return <LobbyScreen onStart={startGame} err={lobbyErr} />

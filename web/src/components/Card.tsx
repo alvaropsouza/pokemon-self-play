@@ -1,4 +1,4 @@
-import { useContext, useState } from 'react'
+import { useContext, useState, useEffect } from 'react'
 import type { CardView, PokemonView } from '../api'
 import { energyColor, energyDotStyle, energyImage } from '../energy'
 import { PreviewCtx } from '../preview'
@@ -46,6 +46,9 @@ export function Card({ view, selected, onClick, dragData }: {
   const pk = 'card' in view ? view : null
   const setPreview = useContext(PreviewCtx)
   const img = c.image || (c.category === 'Energy' ? energyImage(c.nameEN) : '')
+  const [imgErr, setImgErr] = useState(false)
+  // Reset imgErr se a src mudar (ex.: evolução troca a carta)
+  useEffect(() => { setImgErr(false) }, [img])
   const cls = 'cardbox' + (onClick ? ' click' : '') + (selected ? ' sel' : '')
   return (
     <div className={cls} onClick={onClick}
@@ -60,8 +63,8 @@ export function Card({ view, selected, onClick, dragData }: {
         : undefined}
       onMouseEnter={e => setPreview(c, e.currentTarget.getBoundingClientRect())}
       onMouseLeave={() => setPreview(null)}>
-      {img
-        ? <img className="card" src={img} title={c.name} alt={c.name} />
+      {img && !imgErr
+        ? <img className="card" src={img} alt={c.name} title={c.name} onError={() => setImgErr(true)} />
         : <div className="card txt">{c.name}</div>}
       {/* key pelo valor: mudar o dano remonta o nó → pulso de dmgpop */}
       {pk && pk.damage > 0 && <span key={pk.damage} className="dmg">{pk.damage}</span>}
