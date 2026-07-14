@@ -166,7 +166,12 @@ export function ContextBar({ s, sel, setSel, post }: {
                     className={'edot selectable' + (chosen.includes(i) ? ' chosen' : '')}
                     style={{ background: energyColor(e.nameEN) }}
                     title={e.name}
-                    onClick={() => toggleEnergy(i)} />
+                    role="button" tabIndex={0}
+                    aria-pressed={chosen.includes(i)} aria-label={e.name}
+                    onClick={() => toggleEnergy(i)}
+                    onKeyDown={ev => {
+                      if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); toggleEnergy(i) }
+                    }} />
                 ))}
               </>
             : <span>Recuo gratuito</span>

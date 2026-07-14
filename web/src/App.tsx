@@ -83,9 +83,10 @@ function HudRail({ s, pane, setPane, endTurn }: {
   const myTurn = s.current === 0
   const toggle = (p: Pane) => setPane(pane === p ? '' : p)
   const tool = (p: Pane, label: string) => (
-    <div className={'tool' + (pane === p ? ' on' : '')} onClick={() => toggle(p)}>
+    <button type="button" className={'tool' + (pane === p ? ' on' : '')}
+      aria-pressed={pane === p} onClick={() => toggle(p)}>
       {label}
-    </div>
+    </button>
   )
   return (
     <aside id="right">
@@ -129,9 +130,10 @@ function Toasts({ s, err, errN }: { s: GameState; err: string; errN: number }) {
     s.log!.slice(p).forEach(l => push(l, 'info'))
   }, [logLen, push]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  if (toasts.length === 0) return null
+  // Container sempre montado: região aria-live precisa existir antes da
+  // mensagem para o leitor de tela anunciar.
   return (
-    <div id="toasts">
+    <div id="toasts" role="status" aria-live="polite">
       {toasts.map(t => <div key={t.id} className={'toast ' + t.kind}>{t.text}</div>)}
     </div>
   )
@@ -259,6 +261,14 @@ export default function App() {
     setPreview(c && rect ? { card: c, rect } : null), [])
 
   useEffect(() => { fetchState().then(setS).catch(() => {}) }, [])
+
+  // Escape fecha a gaveta lateral (log/arbitragem/config).
+  useEffect(() => {
+    if (!pane) return
+    const h = (e: KeyboardEvent) => { if (e.key === 'Escape') setPane('') }
+    window.addEventListener('keydown', h)
+    return () => window.removeEventListener('keydown', h)
+  }, [pane])
 
   const startGame = useCallback((c: GameConfig) => {
     setConfig(c)

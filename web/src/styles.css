@@ -4,6 +4,7 @@
      como objeto sobre a mesa; matink virou tinta clara (texto sobre feltro). */
   --mat:#27305c; --mat2:#1c2346; --matline:#4d5a9a; --matink:#b7c0ef;
   --accent:#f5b942; --blue:#5f8cff; --ok:#57c26b; --bad:#ff7b6b;
+  --danger:#c0392b; --danger2:#a93226; --danger3:#922b21; --chip:#2b3352;
   /* Carta escala com a tela: as cartas são as protagonistas da UI.
      Orçamento vertical: 2 tapetes (banco 1.15cw + ativo 1.35cw, alturas ×1.397)
      + mão parcialmente encaixada na bandeja (1.25cw visíveis) ≈ 8.3cw;
@@ -174,7 +175,8 @@ body {
 .cardbox.click:hover .card, .cardbox.click:focus-visible .card { box-shadow:0 0 0 2px var(--blue), 0 0 10px rgba(95,140,255,.5); }
 .cardbox.click:focus-visible { outline:none; }
 .cardbox.sel { outline:3px solid var(--accent); border-radius:8px; box-shadow:0 0 14px rgba(245,185,66,.6); }
-.card { width:var(--cw); border-radius:6px; display:block; box-shadow:0 3px 8px rgba(0,0,0,.55); }
+/* aspect-ratio reserva a altura antes do scan carregar (sem layout shift) */
+.card { width:var(--cw); aspect-ratio:63/88; border-radius:6px; display:block; box-shadow:0 3px 8px rgba(0,0,0,.55); }
 .card.txt { aspect-ratio:63/88; background:#e9ecf8; color:#333; font-size:10px; padding:4px; overflow:hidden; }
 .dmg { position:absolute; top:2px; right:2px; background:#c0392b; color:#fff; border-radius:9px; padding:1px 6px; font-size:11px; font-weight:700; }
 .cond { position:absolute; bottom:2px; left:2px; right:2px; text-align:center; }
@@ -189,11 +191,17 @@ body {
 .hptxt { font-size:10px; font-weight:700; text-align:center; color:var(--matink); }
 
 /* pilhas/Estádio: elementos auxiliares — menores que qualquer carta em jogo */
-.pile { position:relative; width:calc(var(--cw) * .72); aspect-ratio:63/88; border-radius:7px; background:#3b4668; border:2px solid #566198;
-        box-shadow:3px 3px 0 #2e3854, 6px 6px 0 #242c45; display:flex; align-items:center; justify-content:center; }
+/* pilha realista: bordas claras das cartas empilhadas (escurecendo com a
+   profundidade) + sombra difusa no feltro */
+.pile { position:relative; width:calc(var(--cw) * .72); aspect-ratio:63/88; border-radius:7px;
+        display:flex; align-items:center; justify-content:center;
+        box-shadow:
+          0 1px 0 #b9bfd6, 0 2px 0 #383f61,
+          0 3px 0 #aab0c9, 0 4px 0 #333a59,
+          0 5px 0 #989ebc, 0 6px 0 #2e3450,
+          0 10px 14px rgba(0,0,0,.55); }
 .pile.empty { background:rgba(255,255,255,.08); border:2px dashed var(--matline); box-shadow:none; }
-.pile .ball { width:28px; height:28px; border-radius:50%; border:3px solid #202844;
-              background:linear-gradient(#6273ac 44%, #202844 44%, #202844 56%, #46517f 56%); }
+.pile .back { width:100%; height:100%; object-fit:cover; border-radius:7px; display:block; }
 .cnt { position:absolute; bottom:3px; right:4px; background:rgba(0,0,0,.75); color:#fff; border:1px solid rgba(255,255,255,.25); border-radius:9px; padding:0 7px; font-size:12px; font-weight:700; }
 .discard-top .card { width:calc(var(--cw) * .72); }
 .apoio .card, .apoio .slot { width:calc(var(--cw) * .72); }
@@ -206,12 +214,12 @@ body {
           display:flex; align-items:center; gap:8px; max-width:92%; padding:7px 14px;
           background:rgba(13,15,30,.72); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px);
           border:1px solid rgba(183,192,239,.35); border-radius:999px;
-          box-shadow:0 6px 20px rgba(0,0,0,.45); font-size:12px; font-weight:600;
+          box-shadow:0 4px 8px rgba(0,0,0,.5); font-size:12px; font-weight:600;
           animation:ctxin .18s ease-out; }
 @keyframes ctxin { from { opacity:0; transform:translateX(-50%) translateY(6px); } }
 .vez { padding:2px 9px; border-radius:10px; font-weight:800; font-size:11px; letter-spacing:.5px; }
 .vez.you { background:var(--accent); color:#1a1a1a; }
-.vez.bot { background:#2b3352; color:var(--blue); }
+.vez.bot { background:var(--chip); color:var(--blue); }
 /* instrução de pick inline */
 .pick-hint { color:var(--ok); font-size:12px; font-weight:600; display:flex; align-items:center; gap:6px; }
 /* retreat prompt: energias toggleáveis */
@@ -257,8 +265,8 @@ button.primary { background:var(--accent); color:#1a1a1a; font-weight:700; borde
 .tool:hover, .tool.on { border-color:var(--accent); color:var(--txt); }
 /* TERMINAR TURNO: ação mais importante do turno — fundo sólido, visualmente
    primária, ancorada no canto inferior direito da tela */
-#endturn { background:#c0392b; border:1px solid #a93226; border-radius:14px; padding:16px 4px; color:#fff; font-weight:800; font-size:12px; letter-spacing:.5px; line-height:1.3; }
-#endturn:hover { background:#a93226; border-color:#922b21; }
+#endturn { background:var(--danger); border:1px solid var(--danger2); border-radius:14px; padding:16px 4px; color:#fff; font-weight:800; font-size:12px; letter-spacing:.5px; line-height:1.3; }
+#endturn:hover { background:var(--danger2); border-color:var(--danger3); }
 #endturn:disabled { background:#3a2430; border-color:#442833; color:#8a6a72; cursor:default; }
 #right .spacer { flex:1; }
 
@@ -268,7 +276,7 @@ button.primary { background:var(--accent); color:#1a1a1a; font-weight:700; borde
 .toast { max-width:60vw; padding:7px 16px; border-radius:999px; font-size:12px; font-weight:600;
          background:rgba(13,15,30,.82); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px);
          border:1px solid rgba(183,192,239,.35); color:var(--txt);
-         box-shadow:0 6px 20px rgba(0,0,0,.5); animation:toastin .25s ease-out; }
+         box-shadow:0 4px 8px rgba(0,0,0,.5); animation:toastin .25s ease-out; }
 .toast.err { border-color:rgba(255,123,107,.55); color:var(--bad); }
 @keyframes toastin { from { opacity:0; transform:translateY(-8px); } }
 
@@ -319,7 +327,14 @@ button.primary { background:var(--accent); color:#1a1a1a; font-weight:700; borde
 /* bolinhas de energia ligada, coloridas por elemento */
 .edot { display:inline-block; width:13px; height:13px; border-radius:50%; border:2px solid rgba(255,255,255,.75); box-shadow:0 1px 2px rgba(0,0,0,.35); margin:0 1px; vertical-align:middle; }
 /* chip de Ferramenta ligada ("F"); nome completo no title */
-.tooldot { display:inline-block; height:13px; border-radius:3px; background:#2b3352; border:1px solid rgba(255,255,255,.35); color:#fff; font-size:9px; font-weight:700; line-height:13px; text-align:center; margin:0 1px; padding:0 3px; vertical-align:middle; }
+.tooldot { display:inline-block; height:13px; border-radius:3px; background:var(--chip); border:1px solid rgba(255,255,255,.35); color:#fff; font-size:9px; font-weight:700; line-height:13px; text-align:center; margin:0 1px; padding:0 3px; vertical-align:middle; }
+
+/* telas estreitas: sidebars encolhem e o orçamento horizontal de --cw acompanha */
+@media (max-width: 900px) {
+  :root { --cw:clamp(56px, min(calc((100vh - 165px) / 8.3), calc((100vw - 280px) / 7.5)), 200px); }
+  #app { grid-template-columns:90px 1fr 118px; gap:8px; padding:8px 8px 4px; }
+  #drawer { right:130px; width:min(320px, 55vw); }
+}
 
 @media (prefers-reduced-motion: reduce) {
   .battlefield .cardbox, .stage .cardbox, .edot, .dmg, .base.picking, #ctxbar, .toast { animation:none; transition:none; }

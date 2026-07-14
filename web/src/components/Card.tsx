@@ -130,10 +130,10 @@ export function PokemonSlot({ view, selected, onClick, onDropCard, dragData, pla
 
 export function DeckPile({ count }: { count: number }) {
   if (count <= 0) return <div className="pile empty" />
+  // Contagem sem badge: hover (title) e painel Partida.
   return (
-    <div className="pile">
-      <div className="ball" />
-      <span className="cnt">{count}</span>
+    <div className="pile" title={`${count} carta${count !== 1 ? 's' : ''}`}>
+      <img className="back" src="/cardback.jpg" alt="verso do baralho" />
     </div>
   )
 }

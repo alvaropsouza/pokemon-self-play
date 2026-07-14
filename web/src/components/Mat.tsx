@@ -142,7 +142,7 @@ function Piles({ side }: { side: SideView }) {
 export function BotMat({ side, stadium }: { side: SideView; stadium?: CardView }) {
   const noop = () => {}
   return (
-    <section className="mat bot">
+    <section className="mat bot" aria-label="Lado do bot">
       <Piles side={side} />
       <div className="battlefield">
         <Bench side={side} isYou={false} sel={null} onSelect={noop} />
@@ -172,7 +172,7 @@ export function YouMat({ side, sel, onSelect, onDropHand, dragBench, pickMode, m
   menu?: React.ReactNode
 }) {
   return (
-    <section className="mat you">
+    <section className="mat you" aria-label="Seu lado">
       <div className="battlefield">
         <Stage side={side} isYou sel={sel} onSelect={onSelect} onDropHand={onDropHand} pickMode={pickMode} menu={menu} />
         <Bench side={side} isYou sel={sel} onSelect={onSelect} onDropHand={onDropHand} dragBench={dragBench} pickMode={pickMode} />
