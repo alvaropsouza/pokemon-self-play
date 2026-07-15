@@ -32,4 +32,4 @@ Mesa de jogo, sóbria, funcional. Remete a um tapete (playmat) de TCG real: zona
 
 ## Accessibility & Inclusion
 
-Sem requisito WCAG formal (uso pessoal), mas básicos valem: contraste legível no tema escuro, `prefers-reduced-motion` respeitado, foco visível em controles.
+WCAG AA: contraste ≥ 4.5:1 em texto normal, navegação por teclado funcional em todas as ações críticas, `prefers-reduced-motion` respeitado, foco visível em controles interativos.

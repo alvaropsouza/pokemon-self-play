@@ -211,8 +211,14 @@ function DeckMenu({ decks, sel, setSel, who, onView }: {
   return (
     <section className={`lobby-side deckshow ${who}`} style={{ '--el': col } as CSSProperties}>
       <h2>{who === 'you' ? 'Você' : 'Bot'}</h2>
-      <input type="search" className="dk-search" placeholder="Buscar deck ou tipo…"
-        value={q} onChange={e => setQ(e.target.value)} aria-label="Buscar deck" />
+      <div className="dk-search-row">
+        <input type="search" className="dk-search" placeholder="Buscar deck ou tipo…"
+          value={q} onChange={e => setQ(e.target.value)} aria-label="Buscar deck" />
+        <button type="button" className="dk-random" aria-label="Deck aleatório"
+          onClick={() => { setQ(''); setSel(decks[Math.floor(Math.random() * decks.length)].id) }}>
+          🎲
+        </button>
+      </div>
       <div className="dk-menu" role="listbox" aria-label={`Decks — ${who === 'you' ? 'você' : 'bot'}`}>
         {hits.length === 0 && <div className="dk-none">Nenhum deck para “{q}”</div>}
         {hits.map(dk => (
@@ -220,7 +226,7 @@ function DeckMenu({ decks, sel, setSel, who, onView }: {
             className={'dk-row' + (dk.id === d.id ? ' on' : '')}
             style={{ '--el': energyColor(dk.type) } as CSSProperties}
             onClick={() => setSel(dk.id)}>
-            <img src={cardImg(dk.star)} alt="" loading="lazy" />
+            <img src={cardImg(dk.star)} alt="" loading="lazy" onError={e => { (e.target as HTMLImageElement).style.visibility = 'hidden' }} />
             <span className="dk-row-name">{dk.name}</span>
             <span className="dk-row-type">
               <i className="edot" style={energyDotStyle(dk.type)} />
@@ -231,7 +237,7 @@ function DeckMenu({ decks, sel, setSel, who, onView }: {
       </div>
       <div className="dk-sel">
         {/* key: trocar de deck remonta a imagem → animação de entrada */}
-        <img key={d.id} className="coverimg mini" src={cover} alt={d.name} />
+        <img key={d.id} className="coverimg mini" src={cover} alt={d.name} onError={e => { (e.target as HTMLImageElement).style.visibility = 'hidden' }} />
         <div className="dk-sel-info">
           <div className="deckname">{d.name}</div>
           <div className="deckmeta">
@@ -319,8 +325,11 @@ function LobbyScreen({ onStart, err }: { onStart: (c: GameConfig) => void; err: 
   const [myId, setMyId] = useState('')
   const [botId, setBotId] = useState('')
   const [viewer, setViewer] = useState<DeckInfo | null>(null)
+  const [isStarting, setIsStarting] = useState(false)
 
-  useEffect(() => {
+  const loadDecks = useCallback(() => {
+    setLoadErr('')
+    setDecks(null)
     fetchDecks().then(ds => {
       setDecks(ds)
       const at = (t: string) => ds.find(d => d.type === t)?.id ?? ds[0]?.id ?? ''
@@ -329,6 +338,15 @@ function LobbyScreen({ onStart, err }: { onStart: (c: GameConfig) => void; err: 
     }).catch(e => setLoadErr(netErr(e)))
   }, [])
 
+  useEffect(() => { loadDecks() }, [loadDecks])
+  useEffect(() => { if (err) setIsStarting(false) }, [err])
+
+  const handleStart = useCallback(() => {
+    if (!decks || !myId || !botId || isStarting) return
+    setIsStarting(true)
+    onStart({ mytype: myId, bottype: botId })
+  }, [decks, myId, botId, isStarting, onStart])
+
   return (
     <div id="lobby">
       <div className="lobby-box">
@@ -336,7 +354,13 @@ function LobbyScreen({ onStart, err }: { onStart: (c: GameConfig) => void; err: 
           <div className="lobby-title">Pokémon TCG</div>
           <div className="lobby-sub">Escolha o Battle Deck de cada lado</div>
         </div>
-        {!decks && <div className="lobby-sub">{loadErr || 'Carregando decks…'}</div>}
+        {!decks && !loadErr && <div className="lobby-sub">Carregando decks…</div>}
+        {loadErr && (
+          <div className="lobby-load-err">
+            <span>{loadErr}</span>
+            <button type="button" onClick={loadDecks}>Tentar novamente</button>
+          </div>
+        )}
         {decks && (
           <div className="lobby-sides">
             <DeckMenu decks={decks} sel={myId} setSel={setMyId} who="you" onView={setViewer} />
@@ -344,11 +368,11 @@ function LobbyScreen({ onStart, err }: { onStart: (c: GameConfig) => void; err: 
             <DeckMenu decks={decks} sel={botId} setSel={setBotId} who="bot" onView={setViewer} />
           </div>
         )}
-        {err && <div className="lobby-err">{err}</div>}
+        {err && <div className="lobby-err" role="alert">{err}</div>}
         <button type="button" className="primary lobby-start"
-          disabled={!decks || !myId || !botId}
-          onClick={() => decks && onStart({ mytype: myId, bottype: botId })}>
-          Iniciar partida
+          disabled={!decks || !myId || !botId || isStarting}
+          onClick={handleStart}>
+          {isStarting ? 'Iniciando…' : 'Iniciar partida'}
         </button>
       </div>
       {viewer && <DeckViewer deck={viewer} onClose={() => setViewer(null)} />}
