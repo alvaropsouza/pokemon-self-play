@@ -1,27 +1,48 @@
 {
+  "As long as this Pokémon is in the Active Spot, attacks used by your opponent's Active Pokémon do 30 less damage (before applying Weakness and Resistance).": {
+    "manual": true,
+    "source": "human",
+    "verified": true
+  },
+  "As often as you like during your turn, you may use this Ability. Move a Basic {G} Energy from 1 of your Pokémon to another of your Pokémon.": {
+    "manual": true,
+    "source": "human",
+    "verified": true
+  },
   "Ask your opponent if each player may take a Prize card. If yes, each player takes a Prize card. If no, you draw 4 cards.": {
     "manual": true,
-    "source": "llm"
+    "source": "human",
+    "verified": true
   },
   "Attach up to 3 Basic {F} Energy cards from your discard pile to your Benched Pokémon in any way you like.": {
     "manual": true,
-    "source": "llm"
+    "source": "human",
+    "verified": true
+  },
+  "Attacks used by your {F} Pokémon do 30 more damage to your opponent's Active Pokémon (before applying Weakness and Resistance).": {
+    "manual": true,
+    "source": "human",
+    "verified": true
   },
   "Before doing damage, discard all Pokémon Tools from your opponent's Active Pokémon.": {
     "manual": true,
-    "source": "llm"
+    "source": "human",
+    "verified": true
   },
   "Choose 1 of your Basic Pokémon in play. If you have a Stage 2 card in your hand that evolves from that Pokémon, put that card onto the Basic Pokémon to evolve it, skipping the Stage 1. You can't use this card during your first turn or on a Basic Pokémon that was put into play this turn.": {
     "manual": true,
-    "source": "llm"
+    "source": "human",
+    "verified": true
   },
   "Choose a Pokémon in play (yours or your opponent's) that has the least HP remaining, except for this Pokémon, and it is Knocked Out.": {
     "manual": true,
-    "source": "llm"
+    "source": "human",
+    "verified": true
   },
   "Devolve 1 of your evolved {P} Pokémon by putting any number of Evolution cards on it into your hand. (That Pokémon can't evolve this turn.)": {
     "manual": true,
-    "source": "llm"
+    "source": "human",
+    "verified": true
   },
   "Discard an Energy from this Pokémon.": {
     "ops": [
@@ -34,15 +55,18 @@
   },
   "Discard the top 6 cards of your deck, and this attack does 100 damage for each Basic {W} Energy card that you discarded in this way.": {
     "manual": true,
-    "source": "llm"
+    "source": "human",
+    "verified": true
   },
   "Discard the top card of your deck, and if that card is a Supporter card, use the effect of that card as the effect of this attack.": {
     "manual": true,
-    "source": "llm"
+    "source": "human",
+    "verified": true
   },
   "Discard the top card of your opponent's deck.": {
     "manual": true,
-    "source": "llm"
+    "source": "human",
+    "verified": true
   },
   "Draw a card.": {
     "ops": [
@@ -55,207 +79,318 @@
   },
   "During this turn, attacks used by your {F} Pokémon do 30 more damage to your opponent's Active Pokémon (before applying Weakness and Resistance).": {
     "manual": true,
-    "source": "llm"
+    "source": "human",
+    "verified": true
   },
   "During your next turn, this Pokémon can't use Accelerating Stab.": {
     "manual": true,
-    "source": "llm"
+    "source": "human",
+    "verified": true
   },
   "During your next turn, this Pokémon can't use Bright Horns.": {
     "manual": true,
-    "source": "llm"
+    "source": "human",
+    "verified": true
   },
   "During your next turn, this Pokémon can't use Flashing Bolt.": {
     "manual": true,
-    "source": "llm"
+    "source": "human",
+    "verified": true
   },
   "During your next turn, this Pokémon can't use Mega Brave.": {
     "manual": true,
-    "source": "llm"
+    "source": "human",
+    "verified": true
   },
   "During your next turn, this Pokémon can't use attacks.": {
     "manual": true,
-    "source": "llm"
+    "source": "human",
+    "verified": true
   },
   "During your opponent's next turn, all of your {M} Pokémon take 30 less damage from attacks from your opponent's Pokémon (after applying Weakness and Resistance). (This includes new Pokémon that come into play.)": {
     "manual": true,
-    "source": "llm"
+    "source": "human",
+    "verified": true
   },
   "During your opponent's next turn, attacks used by the Defending Pokémon do 20 less damage (before applying Weakness and Resistance).": {
     "manual": true,
-    "source": "llm"
+    "source": "human",
+    "verified": true
   },
   "During your opponent's next turn, if the Defending Pokémon tries to use an attack, your opponent flips a coin. If tails, that attack doesn't happen.": {
     "manual": true,
-    "source": "llm"
+    "source": "human",
+    "verified": true
   },
   "During your opponent's next turn, prevent all damage done to this Pokémon by attacks from Basic Pokémon.": {
     "manual": true,
-    "source": "llm"
+    "source": "human",
+    "verified": true
   },
   "During your opponent's next turn, the Defending Pokémon can't retreat.": {
     "manual": true,
-    "source": "llm"
+    "source": "human",
+    "verified": true
   },
   "During your opponent's next turn, this Pokémon takes 30 less damage from attacks (after applying Weakness and Resistance).": {
     "manual": true,
-    "source": "llm"
+    "source": "human",
+    "verified": true
   },
   "During your opponent's next turn, whenever they attach an Energy card from their hand to the Defending Pokémon, place 8 damage counters on that Pokémon.": {
     "manual": true,
-    "source": "llm"
+    "source": "human",
+    "verified": true
+  },
+  "Each Basic {G} Energy attached to all of your Pokémon provides {G}{G} Energy. The effect of Wild Growth doesn't stack.": {
+    "manual": true,
+    "source": "human",
+    "verified": true
   },
   "Each player's {G} Pokémon can evolve into {G} Pokémon during the turn they play those Pokémon, except during their first turn.": {
     "manual": true,
-    "source": "llm"
+    "source": "human",
+    "verified": true
   },
   "Flip 2 coins. For each heads, discard an Energy from your opponent's Active Pokémon.": {
     "manual": true,
-    "source": "llm"
+    "source": "human",
+    "verified": true
   },
   "Flip 2 coins. If both of them are heads, heal all damage from 1 of your Pokémon.": {
     "manual": true,
-    "source": "llm"
+    "source": "human",
+    "verified": true
   },
   "Flip 2 coins. If both of them are heads, this attack does 100 more damage.": {
     "manual": true,
-    "source": "llm"
+    "source": "human",
+    "verified": true
   },
   "Flip 2 coins. This attack does 10 damage for each heads.": {
     "manual": true,
-    "source": "llm"
+    "source": "human",
+    "verified": true
   },
   "Flip 2 coins. This attack does 30 damage for each heads.": {
     "manual": true,
-    "source": "llm"
+    "source": "human",
+    "verified": true
   },
   "Flip 3 coins. This attack does 10 damage for each heads.": {
     "manual": true,
-    "source": "llm"
+    "source": "human",
+    "verified": true
   },
   "Flip 5 coins. This attack does 30 damage for each heads.": {
     "manual": true,
-    "source": "llm"
+    "source": "human",
+    "verified": true
   },
   "Flip a coin until you get tails. For each heads, choose a random card from your opponent's hand. Your opponent reveals those cards and shuffles them into their deck.": {
     "manual": true,
-    "source": "llm"
+    "source": "human",
+    "verified": true
   },
   "Flip a coin until you get tails. Search your deck for a number of cards up to the number of heads and put them into your hand. Then, shuffle your deck.": {
     "manual": true,
-    "source": "llm"
+    "source": "human",
+    "verified": true
   },
   "Flip a coin until you get tails. This attack does 30 more damage for each heads.": {
     "manual": true,
-    "source": "llm"
+    "source": "human",
+    "verified": true
   },
   "Flip a coin until you get tails. This attack does 50 more damage for each heads.": {
     "manual": true,
-    "source": "llm"
+    "source": "human",
+    "verified": true
   },
   "Flip a coin. If heads, choose 1 of your opponent's Pokémon. Shuffle that Pokémon and all attached cards into their deck.": {
     "manual": true,
-    "source": "llm"
+    "source": "human",
+    "verified": true
   },
   "Flip a coin. If heads, choose a Special Condition. Your opponent's Active Pokémon is now affected by that Special Condition.": {
     "manual": true,
-    "source": "llm"
+    "source": "human",
+    "verified": true
   },
   "Flip a coin. If heads, during your opponent's next turn, prevent all damage from and effects of attacks done to this Pokémon.": {
     "manual": true,
-    "source": "llm"
+    "source": "human",
+    "verified": true
   },
   "Flip a coin. If tails, this attack does nothing.": {
     "manual": true,
-    "source": "llm"
+    "source": "human",
+    "verified": true
   },
   "For each of your Benched Pokémon, search your deck for a Basic {P} Energy card and attach it to that Pokémon. Then, shuffle your deck.": {
     "manual": true,
-    "source": "llm"
+    "source": "human",
+    "verified": true
   },
   "Heal 60 damage from 1 of your Pokémon, and it recovers from all Special Conditions.": {
     "manual": true,
-    "source": "llm"
+    "source": "human",
+    "verified": true
   },
   "Heal all damage from 1 of your Mega Evolution Pokémon ex. If you healed any damage in this way, put all Energy attached to that Pokémon into your hand.": {
     "manual": true,
-    "source": "llm"
+    "source": "human",
+    "verified": true
   },
   "If this Pokémon evolved from Magneton during this turn, this attack does 120 more damage.": {
     "manual": true,
-    "source": "llm"
+    "source": "human",
+    "verified": true
   },
   "If this Pokémon has any damage counters on it, this attack can be used for {D}.": {
     "manual": true,
-    "source": "llm"
+    "source": "human",
+    "verified": true
   },
   "If this Pokémon has at least 2 extra Energy attached (in addition to this attack's cost), this attack does 140 more damage.": {
     "manual": true,
-    "source": "llm"
+    "source": "human",
+    "verified": true
+  },
+  "If this Pokémon is Knocked Out by damage from an attack from your opponent's Pokémon ex, your opponent can't take any Prize cards for it.": {
+    "manual": true,
+    "source": "human",
+    "verified": true
+  },
+  "If this Pokémon is in your hand when you are setting up to play, you may put it face down in the Active Spot.": {
+    "manual": true,
+    "source": "human",
+    "verified": true
   },
   "If you don't have Lunatone on your Bench, this attack does nothing. This attack's damage isn't affected by Weakness or Resistance.": {
     "manual": true,
-    "source": "llm"
+    "source": "human",
+    "verified": true
   },
   "If you go first, you can use this attack during your first turn. Search your deck for a card and put it into your hand. Then, shuffle your deck.": {
     "manual": true,
-    "source": "llm"
+    "source": "human",
+    "verified": true
   },
   "If you have a Stadium in play, this attack does 50 more damage.": {
     "manual": true,
-    "source": "llm"
+    "source": "human",
+    "verified": true
   },
   "If you have at least 4 {L} Energy in play, this attack does 90 more damage.": {
     "manual": true,
-    "source": "llm"
+    "source": "human",
+    "verified": true
   },
   "If you have exactly 6 Prize cards remaining, this attack does 200 more damage.": {
     "manual": true,
-    "source": "llm"
+    "source": "human",
+    "verified": true
+  },
+  "If your Active {D} Pokémon is damaged by an attack from your opponent's Pokémon (even if your Active {D} Pokémon is Knocked Out), place 1 damage counter on the Attacking Pokémon.": {
+    "manual": true,
+    "source": "human",
+    "verified": true
   },
   "If your opponent has a Stadium in play, discard it. If you do, your opponent can't play any Stadium cards from their hand during their next turn.": {
     "manual": true,
-    "source": "llm"
+    "source": "human",
+    "verified": true
   },
   "If your opponent's Active Pokémon already has any damage counters on it, this attack's base damage is 30.": {
     "manual": true,
-    "source": "llm"
+    "source": "human",
+    "verified": true
   },
   "If your opponent's Active Pokémon has exactly 6 damage counters on it, that Pokémon is Knocked Out.": {
     "manual": true,
-    "source": "llm"
+    "source": "human",
+    "verified": true
   },
   "If your opponent's Active Pokémon is Burned, this attack does 160 more damage.": {
     "manual": true,
-    "source": "llm"
+    "source": "human",
+    "verified": true
   },
   "If your opponent's Pokémon is Knocked Out by damage from this attack, during your opponent's next turn, prevent all damage from and effects of attacks done to this Pokémon.": {
     "manual": true,
-    "source": "llm"
+    "source": "human",
+    "verified": true
   },
   "Move a Basic Energy from 1 of your Pokémon to another of your Pokémon.": {
     "manual": true,
-    "source": "llm"
+    "source": "human",
+    "verified": true
   },
   "Once during each player's turn, that player may discard an Energy card from their hand in order to draw cards until they have as many cards in their hand as they have {P} Pokémon in play.": {
     "manual": true,
-    "source": "llm"
+    "source": "human",
+    "verified": true
   },
   "Once during each player's turn, that player may switch their Active {W} Pokémon with 1 of their Benched {W} Pokémon.": {
     "manual": true,
-    "source": "llm"
+    "source": "human",
+    "verified": true
+  },
+  "Once during your turn, if this Pokémon has any {G} Energy attached, you may use this Ability. Heal 30 damage from 1 of your Pokémon.": {
+    "manual": true,
+    "source": "human",
+    "verified": true
+  },
+  "Once during your turn, if you have Solrock in play, you may discard a Basic {F} Energy card from your hand in order to use this Ability. Draw 3 cards. You can't use more than 1 Lunar Cycle Ability each turn.": {
+    "manual": true,
+    "source": "human",
+    "verified": true
+  },
+  "Once during your turn, when this Pokémon moves from the Active Spot to your Bench, you may use this Ability. Attach up to 2 Basic {W} Energy cards from your hand to this Pokémon.": {
+    "manual": true,
+    "source": "human",
+    "verified": true
+  },
+  "Once during your turn, when you play this Pokémon from your hand to evolve 1 of your Pokémon, you may use this Ability. Flip a coin. If heads, discard an Energy from your opponent's Active Pokémon.": {
+    "manual": true,
+    "source": "human",
+    "verified": true
+  },
+  "Once during your turn, when you play this Pokémon from your hand to evolve 1 of your Pokémon, you may use this Ability. Look at the top 4 cards of your deck and attach any number of Basic Energy cards you find there to your Pokémon in any way you like. Shuffle the other cards back into your deck.": {
+    "manual": true,
+    "source": "human",
+    "verified": true
+  },
+  "Once during your turn, when you play this Pokémon from your hand to evolve 1 of your Pokémon, you may use this Ability. Search your deck for a Shedinja and put it onto your Bench. Then, shuffle your deck.": {
+    "manual": true,
+    "source": "human",
+    "verified": true
+  },
+  "Once during your turn, when your Mega Latias ex moves from your Bench to the Active Spot, you may use this Ability. Move any amount of Energy from your Benched Pokémon to your Active Pokémon.": {
+    "manual": true,
+    "source": "human",
+    "verified": true
+  },
+  "Once during your turn, you may use this Ability. Switch a card from your hand with the top card of your deck.": {
+    "manual": true,
+    "source": "human",
+    "verified": true
   },
   "Place 2 damage counters on your opponent's Active Pokémon for each card in your hand.": {
     "manual": true,
-    "source": "llm"
+    "source": "human",
+    "verified": true
   },
   "Put 2 {R} Energy attached to this Pokémon into your hand.": {
     "manual": true,
-    "source": "llm"
+    "source": "human",
+    "verified": true
   },
   "Put a Pokémon or a Basic Energy card from your discard pile into your hand.": {
     "manual": true,
-    "source": "llm"
+    "source": "human",
+    "verified": true
   },
   "Search your deck for a Basic {F} Energy card or a Basic {F} Pokémon, reveal it, and put it into your hand. Then, shuffle your deck.": {
     "manual": true,
@@ -263,11 +398,13 @@
   },
   "Search your deck for a Basic {G} Energy card and attach it to this Pokémon. Then, shuffle your deck.": {
     "manual": true,
-    "source": "llm"
+    "source": "human",
+    "verified": true
   },
   "Search your deck for a Mega Evolution Pokémon ex, reveal it, and put it into your hand. Then, shuffle your deck.": {
     "manual": true,
-    "source": "llm"
+    "source": "human",
+    "verified": true
   },
   "Search your deck for up to 2 Basic Pokémon and put them onto your Bench. Then, shuffle your deck.": {
     "manual": true,
@@ -279,7 +416,8 @@
   },
   "Search your deck for up to 3 Basic Energy cards and attach them to your Benched Pokémon in any way you like. Then, shuffle your deck.": {
     "manual": true,
-    "source": "llm"
+    "source": "human",
+    "verified": true
   },
   "Search your deck for up to 3 Basic {P} Pokémon and put them onto your Bench. Then, shuffle your deck.": {
     "manual": true,
@@ -291,7 +429,8 @@
   },
   "Search your deck for up to 3 in any combination of {G} Pokémon and Stadium cards, reveal them, and put them into your hand. Then, shuffle your deck.": {
     "manual": true,
-    "source": "llm"
+    "source": "human",
+    "verified": true
   },
   "Shuffle your hand into your deck. Then, draw 6 cards. If you have exactly 6 Prize cards remaining, draw 8 cards instead.": {
     "manual": true,
@@ -303,7 +442,8 @@
   },
   "Switch out your opponent's Active Pokémon to the Bench. (Your opponent chooses the new Active Pokémon.)": {
     "manual": true,
-    "source": "llm"
+    "source": "human",
+    "verified": true
   },
   "Switch this Pokémon with 1 of your Benched Pokémon.": {
     "manual": true,
@@ -315,7 +455,8 @@
   },
   "The Retreat Cost of the Pokémon this card is attached to is {C}{C} less.": {
     "manual": true,
-    "source": "llm"
+    "source": "human",
+    "verified": true
   },
   "This Pokémon also does 10 damage to itself.": {
     "manual": true,
@@ -331,19 +472,23 @@
   },
   "This attack also does 20 damage to 1 of your opponent's Benched Pokémon. (Don't apply Weakness and Resistance for Benched Pokémon.)": {
     "manual": true,
-    "source": "llm"
+    "source": "human",
+    "verified": true
   },
   "This attack does 20 damage for each Basic {W} Energy card in your discard pile. Then, shuffle those cards into your deck.": {
     "manual": true,
-    "source": "llm"
+    "source": "human",
+    "verified": true
   },
   "This attack does 20 damage for each damage counter on your opponent's Active Pokémon.": {
     "manual": true,
-    "source": "llm"
+    "source": "human",
+    "verified": true
   },
   "This attack does 20 damage to each of your opponent's Pokémon. (Don't apply Weakness and Resistance for Benched Pokémon.) Your opponent's Active Pokémon is now Asleep.": {
     "manual": true,
-    "source": "llm"
+    "source": "human",
+    "verified": true
   },
   "This attack does 30 more damage for each {G} Energy attached to this Pokémon.": {
     "ops": [
@@ -356,27 +501,33 @@
   },
   "This attack does 40 damage to 1 of your opponent's Pokémon. (Don't apply Weakness and Resistance for Benched Pokémon.)": {
     "manual": true,
-    "source": "llm"
+    "source": "human",
+    "verified": true
   },
   "This attack does 50 damage for each {P} Energy attached to all of your Pokémon.": {
     "manual": true,
-    "source": "llm"
+    "source": "human",
+    "verified": true
   },
   "This attack does 50 damage to 1 of your opponent's Benched Pokémon. (Don't apply Weakness and Resistance for Benched Pokémon.)": {
     "manual": true,
-    "source": "llm"
+    "source": "human",
+    "verified": true
   },
   "This attack does 60 less damage for each Energy attached to your opponent's Active Pokémon.": {
     "manual": true,
-    "source": "llm"
+    "source": "human",
+    "verified": true
   },
   "This attack does 80 damage for each Prize card you have taken.": {
     "manual": true,
-    "source": "llm"
+    "source": "human",
+    "verified": true
   },
   "This attack's damage isn't affected by Resistance.": {
     "manual": true,
-    "source": "llm"
+    "source": "human",
+    "verified": true
   },
   "Whenever any player puts a Basic non-{D} Pokémon onto their Bench during their turn, place 2 damage counters on that Pokémon.": {
     "manual": true,
@@ -388,11 +539,13 @@
   },
   "You can use this card only if your opponent has 2 or fewer Prize cards remaining.\n\nChoose 1 of your Pokémon in play. During your opponent's next turn, prevent all damage from and effects of attacks done to that Pokémon by your opponent's Pokémon ex.": {
     "manual": true,
-    "source": "llm"
+    "source": "human",
+    "verified": true
   },
   "You may discard all Energy from this Pokémon and have this attack do 130 more damage.": {
     "manual": true,
-    "source": "llm"
+    "source": "human",
+    "verified": true
   },
   "You may draw cards until you have 6 cards in your hand.": {
     "ops": [
@@ -405,7 +558,8 @@
   },
   "You may shuffle all Energy attached to this Pokémon into your deck and have this attack do 80 more damage.": {
     "manual": true,
-    "source": "llm"
+    "source": "human",
+    "verified": true
   },
   "You may switch this Pokémon with 1 of your Benched Pokémon.": {
     "manual": true,
@@ -413,6 +567,7 @@
   },
   "Your opponent reveals their hand, and you discard a card you find there.": {
     "manual": true,
-    "source": "llm"
+    "source": "human",
+    "verified": true
   }
 }

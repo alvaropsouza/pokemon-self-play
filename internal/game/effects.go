@@ -140,8 +140,17 @@ var patterns = []pattern{
 	{regexp.MustCompile(`shuffle your hand.*?into (?:the bottom of )?your deck`), func(m []string) []Op {
 		return []Op{{Kind: OpShuffleHandSelf}}
 	}},
+	{regexp.MustCompile(`once during your turn[^.]*?you may use this ability`), func(m []string) []Op { return []Op{} }},
+	{regexp.MustCompile(`as often as you like during your turn[^.]*?you may use this ability`), func(m []string) []Op { return []Op{} }},
+	{regexp.MustCompile(`you can.t use more than 1[^.]*?ability each turn`), func(m []string) []Op { return []Op{} }},
+	{regexp.MustCompile(`(?:you may )?switch this pokemon with (?:1 of )?your benched pokemon`), func(m []string) []Op {
+		return []Op{{Kind: OpSwitchSelf}}
+	}},
 	{regexp.MustCompile(`switch your active pokemon with (?:1 of )?your benched pokemon`), func(m []string) []Op {
 		return []Op{{Kind: OpSwitchSelf}}
+	}},
+	{regexp.MustCompile(`switch out your opponent.s active pokemon`), func(m []string) []Op {
+		return []Op{{Kind: OpSwitchOpp}}
 	}},
 	{regexp.MustCompile(`switch (?:1 of )?your opponent's benched pokemon with their active pokemon`), func(m []string) []Op {
 		return []Op{{Kind: OpSwitchOpp}}
@@ -155,7 +164,7 @@ var patterns = []pattern{
 	{regexp.MustCompile(`discard all[\w ]{0,20}energy from your opponent's active pokemon`), func(m []string) []Op {
 		return []Op{{Kind: OpDiscardOppEnergy, N: -1}}
 	}},
-	{regexp.MustCompile(`this pokemon does (\d+) damage to itself`), func(m []string) []Op {
+	{regexp.MustCompile(`this pokemon (?:also )?does (\d+) damage to itself`), func(m []string) []Op {
 		return []Op{{Kind: OpDamageSelf, N: atoi(m[1])}}
 	}},
 	{regexp.MustCompile(`put (\d+) damage counters? on this pokemon`), func(m []string) []Op {

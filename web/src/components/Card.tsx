@@ -51,8 +51,7 @@ export function Card({ view, selected, onClick, dragData }: {
   useEffect(() => { setImgErr(false) }, [img])
   const boxRef = useRef<HTMLDivElement>(null)
   const prevDmg = useRef(pk?.damage)
-  // Dano subiu → flash vermelho + tremor; desceu (cura) → flash verde.
-  // Diff local cobre todas as fontes: ataque, efeito, checkup, arbitragem.
+  const prevEnergy = useRef(pk?.energies?.length ?? 0)
   useEffect(() => {
     const prev = prevDmg.current
     prevDmg.current = pk?.damage
@@ -72,6 +71,17 @@ export function Card({ view, selected, onClick, dragData }: {
       { transform: 'translateX(0)' },
     ], { duration: 300, easing: 'ease-out' })
   }, [pk?.damage]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    const cur = pk?.energies?.length ?? 0
+    const prev = prevEnergy.current
+    prevEnergy.current = cur
+    if (!pk || cur >= prev || matchMedia('(prefers-reduced-motion: reduce)').matches) return
+    boxRef.current?.animate([
+      { filter: 'none' },
+      { filter: 'brightness(1.4) sepia(0.6) drop-shadow(0 0 8px rgba(255,180,30,.85))', offset: 0.3 },
+      { filter: 'none' },
+    ], { duration: 500 })
+  }, [pk?.energies?.length]) // eslint-disable-line react-hooks/exhaustive-deps
   const cls = 'cardbox' + (onClick ? ' click' : '') + (selected ? ' sel' : '')
   return (
     <div className={cls} ref={boxRef} onClick={onClick}

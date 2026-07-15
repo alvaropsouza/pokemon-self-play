@@ -55,9 +55,9 @@ tasks:
       - go run ./cmd/compile-effects {{.CLI_ARGS}}
 
   triage:
-    desc: "Triagem de efeitos pendentes em SQLite (task triage -- scan | export); banco em data/triage.db"
+    desc: "Triagem de efeitos pendentes em SQLite (task triage -- export); banco em data/triage.db"
     cmds:
-      - go run ./cmd/effects-triage {{.CLI_ARGS}}
+      - go run ./cmd/effects-triage {{.CLI_ARGS | default "scan"}}
 
   build:
     desc: Compila tudo
