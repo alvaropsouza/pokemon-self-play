@@ -29,6 +29,7 @@ func (g *Game) AttachEnergy(p, handIdx, slot int) error {
 	g.removeFromHand(p, handIdx)
 	ps.EnergyAttached = true
 	g.logf("jogador %d: liga %s em %s", p+1, c.Name.EN, g.Card(t.TopID()).Name.EN)
+	g.emit(Trigger{Kind: TrigEnergyAttached, Player: p, Slot: slot})
 	return nil
 }
 
@@ -66,6 +67,7 @@ func (g *Game) Evolve(p, handIdx, slot int) error {
 	t.clearConditions()
 	g.removeFromHand(p, handIdx)
 	g.logf("jogador %d: %s evolui para %s", p+1, cur.Name.EN, c.Name.EN)
+	g.emit(Trigger{Kind: TrigEvolved, Player: p, Slot: slot})
 	return nil
 }
 
@@ -271,6 +273,7 @@ func (g *Game) finishTurn() {
 	ps.StadiumPlayed = false
 	ps.Retreated = false
 
+	g.emit(Trigger{Kind: TrigTurnEnded, Player: g.Current, Slot: ActiveSlot})
 	g.checkup()
 	if g.Phase == PhaseFinished {
 		return

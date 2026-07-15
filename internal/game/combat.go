@@ -129,6 +129,7 @@ func (g *Game) resolveKnockouts() {
 		ps.Active = nil
 		g.logf("%s (jogador %d) é Nocauteado — jogador %d pega %d Prêmio(s)", name, p+1, 2-p, prizes)
 		g.takePrizes(1-p, prizes)
+		g.emit(Trigger{Kind: TrigKnockOut, Player: p, Slot: ActiveSlot})
 	}
 	// Verifica vitórias após todos os nocautes (simultâneos resolvem juntos).
 	var winners []int
