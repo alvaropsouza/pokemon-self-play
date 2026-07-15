@@ -17,6 +17,35 @@ func ExtraAttackDamage(g *Game, p int, atk cards.Attack, attacker *PokemonInPlay
 			if opp := g.Players[1-p].Active; opp != nil {
 				extra += op.N * len(opp.Energies)
 			}
+		case OpScalePerEnergyAll:
+			for _, pk := range append([]*PokemonInPlay{g.Players[p].Active}, g.Players[p].Bench...) {
+				if pk != nil {
+					extra += op.N * len(pk.Energies)
+				}
+			}
+		case OpScalePerPrizeTaken:
+			extra += op.N * g.Players[p].PrizesTaken
+		case OpScalePerDamageOpp:
+			if opp := g.Players[1-p].Active; opp != nil {
+				extra += op.N * (opp.Damage / 10)
+			}
+		case OpScaleIfStatusOpp:
+			if opp := g.Players[1-p].Active; opp != nil {
+				switch op.Cond {
+				case "poisoned":
+					if opp.Poisoned {
+						extra += op.N
+					}
+				case "burned":
+					if opp.Burned {
+						extra += op.N
+					}
+				default:
+					if string(opp.Rot) == op.Cond {
+						extra += op.N
+					}
+				}
+			}
 		case OpFlipCoinsScale:
 			heads := 0
 			if op.N == 0 {

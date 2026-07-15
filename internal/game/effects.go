@@ -33,6 +33,10 @@ const (
 	OpDamageSelf         OpKind = "damage_self"
 	OpDiscardFromHand    OpKind = "discard_from_hand"
 	OpFlipCoinsScale     OpKind = "flip_coins_scale"
+	OpScalePerEnergyAll  OpKind = "scale_per_energy_all"
+	OpScalePerPrizeTaken OpKind = "scale_per_prize_taken"
+	OpScalePerDamageOpp  OpKind = "scale_per_damage_opp"
+	OpScaleIfStatusOpp   OpKind = "scale_if_status_opp"
 )
 
 // Op is a compiled primitive operation from effect text.
@@ -115,6 +119,24 @@ var patterns = []pattern{
 	{regexp.MustCompile(`(?:this attack )?does (\d+) more damage for each[\w ]{0,30}energy attached to your opponent's active pokemon`), func(m []string) []Op {
 		return []Op{{Kind: OpScalePerEnergyOpp, N: atoi(m[1])}}
 	}},
+	{regexp.MustCompile(`(?:this attack )?does (\d+) less damage for each[\w ]{0,30}energy attached to your opponent's active pokemon`), func(m []string) []Op {
+		return []Op{{Kind: OpScalePerEnergyOpp, N: -atoi(m[1])}}
+	}},
+	{regexp.MustCompile(`(?:this attack )?does (\d+) damage for each[\w\s{}.]{0,50}energy attached to all of your pokemon`), func(m []string) []Op {
+		return []Op{{Kind: OpScalePerEnergyAll, N: atoi(m[1])}}
+	}},
+	{regexp.MustCompile(`(?:this attack )?does (\d+) damage for each prize card you have taken`), func(m []string) []Op {
+		return []Op{{Kind: OpScalePerPrizeTaken, N: atoi(m[1])}}
+	}},
+	{regexp.MustCompile(`(?:this attack )?does (\d+) damage for each damage counter on your opponent's active pokemon`), func(m []string) []Op {
+		return []Op{{Kind: OpScalePerDamageOpp, N: atoi(m[1])}}
+	}},
+	{regexp.MustCompile(`if your opponent's active pokemon is now ` + condAlt + `, (?:this attack )?does (\d+) more damage`), func(m []string) []Op {
+		return []Op{{Kind: OpScaleIfStatusOpp, Cond: m[1], N: atoi(m[2])}}
+	}},
+	{regexp.MustCompile(`if your opponent's active pokemon is ` + condAlt + `, (?:this attack )?does (\d+) more damage`), func(m []string) []Op {
+		return []Op{{Kind: OpScaleIfStatusOpp, Cond: m[1], N: atoi(m[2])}}
+	}},
 	{regexp.MustCompile(`this pokemon is now ` + condAlt + `(?: and ` + condAlt + `)?`), func(m []string) []Op {
 		ops := []Op{{Kind: OpStatus, Cond: m[1], OnSelf: true}}
 		if m[2] != "" {
@@ -150,7 +172,7 @@ var patterns = []pattern{
 	{regexp.MustCompile(`switch your active pokemon with (?:1 of )?your benched pokemon`), func(m []string) []Op {
 		return []Op{{Kind: OpSwitchSelf}}
 	}},
-	{regexp.MustCompile(`switch out your opponent.s active pokemon`), func(m []string) []Op {
+	{regexp.MustCompile(`switch out your opponent.s active pokemon(?: to the bench)?`), func(m []string) []Op {
 		return []Op{{Kind: OpSwitchOpp}}
 	}},
 	{regexp.MustCompile(`switch (?:1 of )?your opponent's benched pokemon with their active pokemon`), func(m []string) []Op {
