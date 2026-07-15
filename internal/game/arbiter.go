@@ -58,6 +58,7 @@ func (g *Game) DrawCards(p, n int) {
 
 func (g *Game) ShuffleDeck(p int) {
 	g.shuffle(g.Players[p].Deck)
+	g.event("shuffle_deck", p)
 	g.logf("arbitragem: deck do jogador %d embaralhado", p+1)
 }
 

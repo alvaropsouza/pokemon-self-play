@@ -46,6 +46,11 @@ export interface PendingChoice {
   candidates: (CardView | PokemonView)[]
 }
 
+export interface GameEvent {
+  kind: 'shuffle_deck' | 'shuffle_hand'
+  player: number
+}
+
 export interface GameState {
   phase: string
   turn: number
@@ -57,6 +62,7 @@ export interface GameState {
   bot: SideView
   stadium?: CardView
   pendingChoice?: PendingChoice
+  events?: GameEvent[]
   error?: string
 }
 

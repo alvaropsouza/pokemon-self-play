@@ -72,6 +72,10 @@ func (g *Game) logf(format string, args ...any) {
 	g.Log = append(g.Log, fmt.Sprintf(format, args...))
 }
 
+func (g *Game) event(kind string, p int) {
+	g.Events = append(g.Events, Event{Kind: kind, Player: p})
+}
+
 func (g *Game) shuffle(pile []string) {
 	g.rng.Shuffle(len(pile), func(i, j int) { pile[i], pile[j] = pile[j], pile[i] })
 }

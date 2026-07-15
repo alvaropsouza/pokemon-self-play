@@ -103,6 +103,7 @@ func (g *Game) startSearch(p int, op Op, rest []Op) bool {
 	if max <= 0 || len(cand) == 0 {
 		g.logf("jogador %d: busca no deck sem resultado", p+1)
 		g.shuffle(ps.Deck)
+		g.event("shuffle_deck", p)
 		g.runOps(p, rest, nil)
 		return false
 	}
@@ -235,6 +236,7 @@ func (g *Game) ResolveChoice(p int, picks []int) error {
 			g.logf("jogador %d: busca pega %d carta(s) → %s", p+1, len(names), destPT(pc.Dest))
 		}
 		g.shuffle(ps.Deck)
+		g.event("shuffle_deck", p)
 	}
 
 	rest := pc.rest

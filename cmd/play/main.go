@@ -387,6 +387,10 @@ func (s *server) stateJSON() map[string]any {
 	if g.Stadium != "" {
 		v["stadium"] = s.cardView(g.Stadium)
 	}
+	if len(g.Events) > 0 {
+		v["events"] = g.Events
+		g.Events = nil
+	}
 	if pc := g.Pending; pc != nil && pc.Player == human {
 		var cand []map[string]any
 		switch pc.Kind {

@@ -99,5 +99,13 @@ type Game struct {
 	NeedPromote [2]bool
 	Pending     *PendingChoice
 
-	Log []string
+	Log    []string
+	Events []Event
+}
+
+// Event notifica a UI de um efeito com semântica que o diff de estado não
+// captura (ex.: embaralhar não muda contagens). Drenado pelo servidor a cada resposta.
+type Event struct {
+	Kind   string `json:"kind"`
+	Player int    `json:"player"`
 }

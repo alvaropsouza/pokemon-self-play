@@ -165,6 +165,7 @@ func (g *Game) runOps(p int, ops []Op, attacker *PokemonInPlay) {
 			}
 		case OpShuffleDeck:
 			g.shuffle(g.Players[p].Deck)
+			g.event("shuffle_deck", p)
 			g.logf("jogador %d: embaralha o deck", p+1)
 		case OpStatus:
 			target := 1 - p
@@ -191,6 +192,7 @@ func (g *Game) shuffleHandIntoDeck(p int, includeTools bool) {
 		}
 	}
 	g.shuffle(ps.Deck)
+	g.event("shuffle_hand", p)
 }
 
 func (g *Game) applyStatusToActive(p int, status string) {

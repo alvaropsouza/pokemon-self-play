@@ -2,6 +2,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProp
 import { fetchDecks, fetchState, postAction, postNew, type CardView, type DeckInfo, type GameConfig, type GameState, type Sel } from './api'
 import { energyColor, energyDotStyle, energyImage, hiresImage } from './energy'
 import { cancelFlights, flyFromDeck } from './drawfx'
+import { playEvents } from './effectsfx'
 import { CardPreview, PreviewCtx, type Preview } from './preview'
 import { Sidebar } from './components/Sidebar'
 import { BotMat, YouMat } from './components/Mat'
@@ -473,7 +474,10 @@ export default function App() {
       if (j.error) setErrN(n => n + 1)
       // Guarda contra panic do servidor: resposta sem `phase` não atualiza o estado
       // (mantém o tabuleiro visível em vez de crashar no render).
-      if (j.phase) setS(j)
+      if (j.phase) {
+        setS(j)
+        playEvents(j.events)
+      }
       setSel(null)
     }).catch(e => setErr(netErr(e)))
   }, [])

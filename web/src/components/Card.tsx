@@ -1,4 +1,4 @@
-import { useContext, useState, useEffect } from 'react'
+import { useContext, useState, useEffect, useRef } from 'react'
 import type { CardView, PokemonView } from '../api'
 import { energyColor, energyDotStyle, energyImage } from '../energy'
 import { PreviewCtx } from '../preview'
@@ -49,9 +49,32 @@ export function Card({ view, selected, onClick, dragData }: {
   const [imgErr, setImgErr] = useState(false)
   // Reset imgErr se a src mudar (ex.: evolução troca a carta)
   useEffect(() => { setImgErr(false) }, [img])
+  const boxRef = useRef<HTMLDivElement>(null)
+  const prevDmg = useRef(pk?.damage)
+  // Dano subiu → flash vermelho + tremor; desceu (cura) → flash verde.
+  // Diff local cobre todas as fontes: ataque, efeito, checkup, arbitragem.
+  useEffect(() => {
+    const prev = prevDmg.current
+    prevDmg.current = pk?.damage
+    if (!pk || prev === undefined || pk.damage === prev) return
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) return
+    const hurt = pk.damage > prev
+    boxRef.current?.animate([
+      { filter: 'none' },
+      hurt
+        ? { filter: 'brightness(1.5) saturate(2) drop-shadow(0 0 10px rgba(255,60,60,.9))', offset: 0.25 }
+        : { filter: 'brightness(1.35) drop-shadow(0 0 10px rgba(80,220,120,.9))', offset: 0.3 },
+      { filter: 'none' },
+    ], { duration: hurt ? 450 : 600 })
+    if (hurt) boxRef.current?.animate([
+      { transform: 'translateX(0)' }, { transform: 'translateX(-5px)' },
+      { transform: 'translateX(4px)' }, { transform: 'translateX(-2px)' },
+      { transform: 'translateX(0)' },
+    ], { duration: 300, easing: 'ease-out' })
+  }, [pk?.damage]) // eslint-disable-line react-hooks/exhaustive-deps
   const cls = 'cardbox' + (onClick ? ' click' : '') + (selected ? ' sel' : '')
   return (
-    <div className={cls} onClick={onClick}
+    <div className={cls} ref={boxRef} onClick={onClick}
       role={onClick ? 'button' : undefined}
       tabIndex={onClick ? 0 : undefined}
       onKeyDown={onClick
@@ -167,7 +190,8 @@ export function DiscardPile({ discard }: { discard: CardView[] | null }) {
   return (
     <div className="discard-top">
       <div style={{ position: 'relative', display: 'inline-block' }}>
-        <Card view={discard![n - 1]} />
+        {/* key por tamanho+topo: descarte novo remonta → animação discpop */}
+        <Card key={`${n}-${discard![n - 1].id}`} view={discard![n - 1]} />
         <span className="cnt">{n}</span>
       </div>
     </div>
