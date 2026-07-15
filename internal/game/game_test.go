@@ -7,44 +7,40 @@ import (
 	"github.com/alvaropsouza/pokemon-self-play/internal/cards"
 )
 
-// testStore monta uma base mínima de cartas sintéticas para os testes.
-func testStore() *cards.Store {
-	s := cards.NewStore()
-	put := func(c cards.Card) { s.Put(&c) }
-
-	put(cards.Card{
+var testCards = []cards.Card{
+	{
 		ID: "t-fire1", Name: cards.Localized{EN: "Firebug"}, Category: cards.CategoryPokemon,
 		Stage: "Basic", HP: 60, Types: []string{"Fire"}, Retreat: 1, RegulationMark: "H",
 		Attacks:    []cards.Attack{{Name: cards.Localized{EN: "Ember"}, Cost: []string{"Fire"}, Damage: "30"}},
 		Weaknesses: []cards.TypeValue{{Type: "Water", Value: "×2"}},
-	})
-	put(cards.Card{
+	},
+	{
 		ID: "t-fire2", Name: cards.Localized{EN: "Firebug II"}, Category: cards.CategoryPokemon,
 		Stage: "Stage1", EvolveFrom: cards.Localized{EN: "Firebug"}, HP: 120,
 		Types: []string{"Fire"}, Retreat: 2, RegulationMark: "H",
 		Attacks: []cards.Attack{{Name: cards.Localized{EN: "Flame Burst"}, Cost: []string{"Fire", "Colorless"}, Damage: "80"}},
-	})
-	put(cards.Card{
+	},
+	{
 		ID: "t-water1", Name: cards.Localized{EN: "Aquaduck"}, Category: cards.CategoryPokemon,
 		Stage: "Basic", HP: 180, Types: []string{"Water"}, Retreat: 2, RegulationMark: "H",
 		Attacks: []cards.Attack{{Name: cards.Localized{EN: "Splash"}, Cost: []string{"Water"}, Damage: "30"}},
-	})
-	put(cards.Card{
-		ID: "t-fireE", Name: cards.Localized{EN: "Fire Energy"}, Category: cards.CategoryEnergy,
-		EnergyType: "Basic",
-	})
-	put(cards.Card{
-		ID: "t-waterE", Name: cards.Localized{EN: "Water Energy"}, Category: cards.CategoryEnergy,
-		EnergyType: "Basic",
-	})
-	put(cards.Card{
-		ID: "t-sup", Name: cards.Localized{EN: "Test Supporter"}, Category: cards.CategoryTrainer,
-		TrainerType: "Supporter", RegulationMark: "H",
-	})
-	put(cards.Card{
-		ID: "t-item", Name: cards.Localized{EN: "Test Item"}, Category: cards.CategoryTrainer,
-		TrainerType: "Item", RegulationMark: "H",
-	})
+	},
+	{
+		ID: "t-dark1", Name: cards.Localized{EN: "Darkrat"}, Category: cards.CategoryPokemon,
+		Stage: "Basic", HP: 70, Types: []string{"Darkness"}, Retreat: 1, RegulationMark: "H",
+	},
+	{ID: "t-fireE", Name: cards.Localized{EN: "Fire Energy"}, Category: cards.CategoryEnergy, EnergyType: "Basic"},
+	{ID: "t-waterE", Name: cards.Localized{EN: "Water Energy"}, Category: cards.CategoryEnergy, EnergyType: "Basic"},
+	{ID: "t-sup", Name: cards.Localized{EN: "Test Supporter"}, Category: cards.CategoryTrainer, TrainerType: "Supporter", RegulationMark: "H"},
+	{ID: "t-item", Name: cards.Localized{EN: "Test Item"}, Category: cards.CategoryTrainer, TrainerType: "Item", RegulationMark: "H"},
+}
+
+func testStore() *cards.Store {
+	s := cards.NewStore()
+	for i := range testCards {
+		c := testCards[i]
+		s.Put(&c)
+	}
 	return s
 }
 

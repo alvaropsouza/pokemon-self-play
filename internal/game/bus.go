@@ -1,6 +1,5 @@
 package game
 
-// TriggerKind identifica um momento do jogo que habilidades reativas observam.
 type TriggerKind string
 
 const (
@@ -8,10 +7,9 @@ const (
 	TrigEvolved        TriggerKind = "evolved"
 	TrigKnockOut       TriggerKind = "knockout"
 	TrigTurnEnded      TriggerKind = "turn-ended"
+	TrigBenchPlaced    TriggerKind = "bench-placed"
 )
 
-// Trigger descreve o momento ocorrido e o Pokémon envolvido (Player + Slot,
-// com ActiveSlot para o Ativo).
 type Trigger struct {
 	Kind   TriggerKind
 	Player int
@@ -20,9 +18,32 @@ type Trigger struct {
 
 type triggerHandler func(g *Game, owner, slot int, t Trigger)
 
-// registro em nível de pacote (não por Game) para que CloneWithSeed continue
-// trivial: nenhum estado de listener vive dentro do Game
-var triggerDB = map[string]triggerHandler{}
+var triggerDB = map[string]triggerHandler{
+	"me01-127": riskyRuins,
+}
+
+func riskyRuins(g *Game, _, _ int, t Trigger) {
+	if t.Kind != TrigBenchPlaced {
+		return
+	}
+	pk, err := g.target(t.Player, t.Slot)
+	if err != nil {
+		return
+	}
+	c := g.Card(pk.TopID())
+	for _, ty := range c.Types {
+		if ty == "Darkness" {
+			return
+		}
+	}
+	pk.Damage += 20
+	g.logf("Risky Ruins: 2 contadores de dano em %s", c.Name.EN)
+}
+
+func HasTrigger(cardID string) bool {
+	_, ok := triggerDB[cardID]
+	return ok
+}
 
 func (g *Game) emit(t Trigger) {
 	for p := 0; p < 2; p++ {
@@ -32,6 +53,11 @@ func (g *Game) emit(t Trigger) {
 		}
 		for i, pk := range ps.Bench {
 			g.fireTrigger(p, i, pk, t)
+		}
+	}
+	if g.Stadium != "" {
+		if h := triggerDB[g.Stadium]; h != nil {
+			h(g, g.StadiumOwner, ActiveSlot, t)
 		}
 	}
 }

@@ -49,6 +49,9 @@ func (g *Game) PlaceBench(p, handIdx int) error {
 	ps.Bench = append(ps.Bench, &PokemonInPlay{Stack: []string{c.ID}, EnteredTurn: g.TurnNumber})
 	g.removeFromHand(p, handIdx)
 	g.logf("jogador %d: %s no Banco", p+1, c.Name.EN)
+	if g.Phase == PhaseTurn {
+		g.emit(Trigger{Kind: TrigBenchPlaced, Player: p, Slot: len(ps.Bench) - 1})
+	}
 	return nil
 }
 

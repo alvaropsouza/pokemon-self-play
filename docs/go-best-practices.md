@@ -145,9 +145,9 @@ Pacotes exportados usam godoc (`// NomeDaFunção …`); código interno não pr
 
 ## 8. Dependências
 
-Política: **zero dependências externas no módulo principal** (só stdlib).
+Política: **stdlib primeiro; dependências externas permitidas quando justificadas.**
 
-Exceção justificada: `go-task` é ferramenta de dev, não entra no `go.mod` do projeto.
+Ferramentas de dev (ex.: `go-task`) não entram no `go.mod` do projeto.
 
 Antes de adicionar qualquer `go get`:
 1. A stdlib resolve? (`encoding/json`, `net/http`, `sync`, `math/rand`, `embed`…)
