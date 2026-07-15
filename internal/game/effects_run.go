@@ -17,6 +17,22 @@ func ExtraAttackDamage(g *Game, p int, atk cards.Attack, attacker *PokemonInPlay
 			if opp := g.Players[1-p].Active; opp != nil {
 				extra += op.N * len(opp.Energies)
 			}
+		case OpFlipCoinsScale:
+			heads := 0
+			if op.N == 0 {
+				for g.flip() {
+					heads++
+				}
+				g.logf("flip até coroa: %d cara(s)", heads)
+			} else {
+				for i := 0; i < op.N; i++ {
+					if g.flip() {
+						heads++
+					}
+				}
+				g.logf("%d cara(s) de %d moeda(s)", heads, op.N)
+			}
+			extra += heads * op.Alt
 		}
 	}
 	return extra

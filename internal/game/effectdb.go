@@ -30,7 +30,7 @@ var validKinds = map[OpKind]bool{
 	OpScalePerEnergySelf: true, OpScalePerEnergyOpp: true, OpStatus: true,
 	OpSearch: true, OpShuffleDeck: true,
 	OpSwitchSelf: true, OpSwitchOpp: true, OpDiscardOppEnergy: true, OpDamageSelf: true,
-	OpDiscardFromHand: true,
+	OpDiscardFromHand: true, OpFlipCoinsScale: true,
 }
 
 var validConds = map[string]bool{"asleep": true, "confused": true, "paralyzed": true, "poisoned": true, "burned": true}

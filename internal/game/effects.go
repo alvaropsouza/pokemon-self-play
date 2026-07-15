@@ -32,6 +32,7 @@ const (
 	OpDiscardOppEnergy   OpKind = "discard_opp_energy"
 	OpDamageSelf         OpKind = "damage_self"
 	OpDiscardFromHand    OpKind = "discard_from_hand"
+	OpFlipCoinsScale     OpKind = "flip_coins_scale"
 )
 
 // Op is a compiled primitive operation from effect text.
@@ -176,6 +177,10 @@ var reConditionalInstead = regexp.MustCompile(
 	`if you have exactly (\d+) prize cards? remaining,\s*draw (\d+) cards? instead`,
 )
 
+var reFlipNCoins = regexp.MustCompile(`flip (\d+) coins?`)
+var reFlipUntilTails = regexp.MustCompile(`flip a coin until you get tails`)
+var reFlipScaleDamage = regexp.MustCompile(`(?:this attack )?does? (\d+) (?:more )?damage for each heads?`)
+
 func buildSearch(count, list, dest string) []Op {
 	finds := parseFinds(list)
 	if finds == nil {
@@ -258,6 +263,7 @@ func compile(text string) CompiledEffect {
 
 	var ops []Op
 	flipNext := false
+	flipCount := -1 // -1: none; 0: until tails; N>0: flip N coins
 	for _, clause := range strings.Split(low, ".") {
 		clause = strings.TrimSpace(clause)
 		if clause == "" {
@@ -266,6 +272,27 @@ func compile(text string) CompiledEffect {
 		if clause == "flip a coin" {
 			flipNext = true
 			continue
+		}
+		if reFlipUntilTails.MatchString(clause) {
+			clause = reFlipUntilTails.ReplaceAllString(clause, " ")
+			if reFiller.MatchString(clause) {
+				flipCount = 0
+				continue
+			}
+		}
+		if m := reFlipNCoins.FindStringSubmatch(clause); m != nil {
+			clause = strings.Replace(clause, m[0], " ", 1)
+			if reFiller.MatchString(clause) {
+				flipCount = atoi(m[1])
+				continue
+			}
+		}
+		if flipCount >= 0 {
+			if m := reFlipScaleDamage.FindStringSubmatch(clause); m != nil {
+				ops = append(ops, Op{Kind: OpFlipCoinsScale, N: flipCount, Alt: atoi(m[1])})
+				clause = strings.Replace(clause, m[0], " ", 1)
+				flipCount = -1
+			}
 		}
 		flip := false
 		if rest, ok := strings.CutPrefix(clause, "if heads,"); ok && flipNext {
@@ -313,7 +340,7 @@ func compile(text string) CompiledEffect {
 			}
 		}
 	}
-	if flipNext {
+	if flipNext || flipCount >= 0 {
 		return CompiledEffect{Manual: true}
 	}
 	return CompiledEffect{Ops: ops}
