@@ -47,21 +47,36 @@ func ExtraAttackDamage(g *Game, p int, atk cards.Attack, attacker *PokemonInPlay
 				}
 			}
 		case OpFlipCoinsScale:
-			heads := 0
-			if op.N == 0 {
+			if op.OnSelf {
+				allHeads := true
+				for i := 0; i < op.N; i++ {
+					if !g.flip() {
+						allHeads = false
+					}
+				}
+				if allHeads {
+					extra += op.Alt
+					g.logf("todas caras (%d) → +%d de dano", op.N, op.Alt)
+				} else {
+					g.logf("nem todas caras (%d) → sem bônus", op.N)
+				}
+			} else if op.N == 0 {
+				heads := 0
 				for g.flip() {
 					heads++
 				}
 				g.logf("flip até coroa: %d cara(s)", heads)
+				extra += heads * op.Alt
 			} else {
+				heads := 0
 				for i := 0; i < op.N; i++ {
 					if g.flip() {
 						heads++
 					}
 				}
 				g.logf("%d cara(s) de %d moeda(s)", heads, op.N)
+				extra += heads * op.Alt
 			}
-			extra += heads * op.Alt
 		}
 	}
 	return extra
@@ -202,6 +217,12 @@ func (g *Game) runOps(p int, ops []Op, attacker *PokemonInPlay) {
 				}
 				_ = g.discardEnergies(opp, a, idxs)
 				g.logf("descarta %d Energia(s) do Ativo do oponente", n)
+			}
+		case OpDamageCountersPerHand:
+			if opp := g.Players[1-p].Active; opp != nil {
+				n := op.N * 10 * len(g.Players[p].Hand)
+				opp.Damage += n
+				g.logf("%d contador(es) por carta na mão → %d de dano", op.N, n)
 			}
 		case OpDamageSelf:
 			if attacker != nil {

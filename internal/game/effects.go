@@ -36,7 +36,8 @@ const (
 	OpScalePerEnergyAll  OpKind = "scale_per_energy_all"
 	OpScalePerPrizeTaken OpKind = "scale_per_prize_taken"
 	OpScalePerDamageOpp  OpKind = "scale_per_damage_opp"
-	OpScaleIfStatusOpp   OpKind = "scale_if_status_opp"
+	OpScaleIfStatusOpp      OpKind = "scale_if_status_opp"
+	OpDamageCountersPerHand OpKind = "damage_counters_per_hand"
 )
 
 // Op is a compiled primitive operation from effect text.
@@ -184,8 +185,14 @@ var patterns = []pattern{
 	{regexp.MustCompile(`discard (\d+)[\w ]{0,30}energy (?:cards? )?from your opponent's active pokemon`), func(m []string) []Op {
 		return []Op{{Kind: OpDiscardOppEnergy, N: atoi(m[1])}}
 	}},
+	{regexp.MustCompile(`discard an?[\w ]{0,20}energy(?:\scard)? from your opponent's active pokemon`), func(m []string) []Op {
+		return []Op{{Kind: OpDiscardOppEnergy, N: 1}}
+	}},
 	{regexp.MustCompile(`discard all[\w ]{0,20}energy from your opponent's active pokemon`), func(m []string) []Op {
 		return []Op{{Kind: OpDiscardOppEnergy, N: -1}}
+	}},
+	{regexp.MustCompile(`place (\d+) damage counters? on your opponent's active pokemon for each card in your hand`), func(m []string) []Op {
+		return []Op{{Kind: OpDamageCountersPerHand, N: atoi(m[1])}}
 	}},
 	{regexp.MustCompile(`this pokemon (?:also )?does (\d+) damage to itself`), func(m []string) []Op {
 		return []Op{{Kind: OpDamageSelf, N: atoi(m[1])}}
@@ -202,6 +209,7 @@ var reConditionalInstead = regexp.MustCompile(
 var reFlipNCoins = regexp.MustCompile(`flip (\d+) coins?`)
 var reFlipUntilTails = regexp.MustCompile(`flip a coin until you get tails`)
 var reFlipScaleDamage = regexp.MustCompile(`(?:this attack )?does? (\d+) (?:more )?damage for each heads?`)
+var reFlipAllHeadsDamage = regexp.MustCompile(`if both of them are heads, (?:this attack )?does (\d+) more damage`)
 
 func buildSearch(count, list, dest string) []Op {
 	finds := parseFinds(list)
@@ -312,6 +320,10 @@ func compile(text string) CompiledEffect {
 		if flipCount >= 0 {
 			if m := reFlipScaleDamage.FindStringSubmatch(clause); m != nil {
 				ops = append(ops, Op{Kind: OpFlipCoinsScale, N: flipCount, Alt: atoi(m[1])})
+				clause = strings.Replace(clause, m[0], " ", 1)
+				flipCount = -1
+			} else if m := reFlipAllHeadsDamage.FindStringSubmatch(clause); m != nil {
+				ops = append(ops, Op{Kind: OpFlipCoinsScale, N: flipCount, Alt: atoi(m[1]), OnSelf: true})
 				clause = strings.Replace(clause, m[0], " ", 1)
 				flipCount = -1
 			}
