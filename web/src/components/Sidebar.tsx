@@ -15,15 +15,38 @@ function MatchTimer() {
 }
 
 function PrizeBalls({ count, variant }: { count: number; variant: 'bot' | 'you' }) {
+  const prevCount = useRef(count)
+  const [justTaken, setJustTaken] = useState<number | null>(null)
+
+  useEffect(() => {
+    if (count < prevCount.current) {
+      setJustTaken(count)
+      const id = setTimeout(() => setJustTaken(null), 450)
+      prevCount.current = count
+      return () => clearTimeout(id)
+    }
+    prevCount.current = count
+  }, [count])
+
+  const label = variant === 'you'
+    ? `Seus prêmios: ${count} restantes`
+    : `Prêmios do oponente: ${count} restantes`
+
   return (
-    <div role="group" className={`prize-track prize-track--${variant}`} aria-label={`${count} prêmios restantes`}>
+    <div role="group" className={`prize-track prize-track--${variant}`} aria-label={label}>
       <div className="prize-header">
         <span className="prize-label">Prêmios</span>
-        <span className="prize-count">{count}<span className="prize-total">/6</span></span>
+        <span className={'prize-count' + (count <= 2 ? ' urgent' : '')} key={count}>
+          {count}<span className="prize-total">/6</span>
+        </span>
       </div>
       <div className="prize-dots">
         {Array.from({ length: 6 }, (_, i) => (
-          <div key={i} className={'prize' + (i >= count ? ' taken' : '')} aria-hidden="true" />
+          <div
+            key={i}
+            className={'prize' + (i >= count ? ' taken' : '') + (i === justTaken ? ' just-taken' : '')}
+            aria-hidden="true"
+          />
         ))}
       </div>
     </div>
