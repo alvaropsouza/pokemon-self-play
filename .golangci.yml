@@ -1,0 +1,35 @@
+version: "2"
+
+linters:
+  enable:
+    - errcheck
+    - govet
+    - staticcheck
+    - unused
+    - gocritic
+    - wrapcheck
+    - exhaustive
+  settings:
+    exhaustive:
+      default-signifies-exhaustive: true
+  exclusions:
+    rules:
+      - path: "_test\\.go"
+        linters:
+          - wrapcheck
+      - path: "^cmd/"
+        linters:
+          - wrapcheck
+      - path: "^internal/bot/"
+        linters:
+          - wrapcheck
+      - source: "defer .*\\.Close\\(\\)|defer .*\\.Rollback\\(\\)"
+        linters:
+          - errcheck
+      - linters:
+          - staticcheck
+        text: "ST1005"
+      - path: "^cmd/"
+        linters:
+          - gocritic
+        text: "exitAfterDefer"

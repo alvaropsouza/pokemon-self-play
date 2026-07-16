@@ -47,7 +47,8 @@ func ExtraAttackDamage(g *Game, p int, atk cards.Attack, attacker *PokemonInPlay
 				}
 			}
 		case OpFlipCoinsScale:
-			if op.OnSelf {
+			switch {
+			case op.OnSelf:
 				allHeads := true
 				for i := 0; i < op.N; i++ {
 					if !g.flip() {
@@ -60,14 +61,14 @@ func ExtraAttackDamage(g *Game, p int, atk cards.Attack, attacker *PokemonInPlay
 				} else {
 					g.logf("nem todas caras (%d) → sem bônus", op.N)
 				}
-			} else if op.N == 0 {
+			case op.N == 0:
 				heads := 0
 				for g.flip() {
 					heads++
 				}
 				g.logf("flip até coroa: %d cara(s)", heads)
 				extra += heads * op.Alt
-			} else {
+			default:
 				heads := 0
 				for i := 0; i < op.N; i++ {
 					if g.flip() {
@@ -77,6 +78,7 @@ func ExtraAttackDamage(g *Game, p int, atk cards.Attack, attacker *PokemonInPlay
 				g.logf("%d cara(s) de %d moeda(s)", heads, op.N)
 				extra += heads * op.Alt
 			}
+		default:
 		}
 	}
 	return extra
@@ -188,8 +190,8 @@ func (g *Game) runOps(p int, ops []Op, attacker *PokemonInPlay) {
 			}
 			_ = g.discardEnergies(p, attacker, ids)
 			g.logf("descarta %d Energia(s) de %s", n, g.Card(attacker.TopID()).Name.EN)
-		case OpScalePerEnergySelf, OpScalePerEnergyOpp:
-			// applied before combat in ExtraAttackDamage
+		case OpScalePerEnergySelf, OpScalePerEnergyOpp, OpScalePerEnergyAll,
+			OpScalePerPrizeTaken, OpScalePerDamageOpp, OpScaleIfStatusOpp, OpFlipCoinsScale:
 		case OpSearch:
 			if g.startSearch(p, op, ops[i+1:]) {
 				return

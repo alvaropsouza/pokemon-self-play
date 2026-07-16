@@ -67,13 +67,13 @@ func matchFind(c *cards.Card, f Find) bool {
 		}
 		return true
 	case cards.CategoryEnergy:
-		// Energia básica: TCGdex usa energyType "Normal"; nome "<Tipo> Energy".
 		if c.EnergyType != "Normal" && c.EnergyType != "Basic" {
 			return false
 		}
 		return f.Type == "" || strings.HasPrefix(c.Name.EN, f.Type+" ")
+	default:
+		return false
 	}
-	return false
 }
 
 // startSearch executa uma op de busca. Devolve true se ficou pendente
@@ -228,11 +228,12 @@ func (g *Game) ResolveChoice(p int, picks []int) error {
 				ps.Hand = append(ps.Hand, id)
 			}
 		}
-		if len(names) == 0 {
+		switch {
+		case len(names) == 0:
 			g.logf("jogador %d: busca no deck sem pegar nada", p+1)
-		} else if pc.Reveal {
+		case pc.Reveal:
 			g.logf("jogador %d: busca revela %s → %s", p+1, strings.Join(names, ", "), destPT(pc.Dest))
-		} else {
+		default:
 			g.logf("jogador %d: busca pega %d carta(s) → %s", p+1, len(names), destPT(pc.Dest))
 		}
 		g.shuffle(ps.Deck)

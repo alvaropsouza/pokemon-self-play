@@ -36,16 +36,31 @@ body {
 .avatar { width:34px; height:34px; border-radius:50%; margin:0 auto 6px; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:14px; border:2px solid var(--line); }
 .pp.bot .avatar { color:var(--blue); background:rgba(95,140,255,.12); border-color:rgba(95,140,255,.4); }
 .pp.you .avatar { color:var(--accent); background:rgba(245,185,66,.12); border-color:rgba(245,185,66,.4); }
-.prizes { background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:8px; text-align:center; }
-.prizes h4 { margin:0 0 6px; font-size:11px; letter-spacing:1px; color:var(--dim); }
-/* prêmios = Pokébolas fechadas; coletado = bola "aberta" (apagada + encolhida) */
-.prizes .col { display:grid; grid-template-columns:repeat(3, auto); gap:7px; justify-content:center; }
-.prize { width:22px; height:22px; border-radius:50%; border:2px solid #1a2138; position:relative;
+/* prêmios integrados no painel do jogador */
+.prize-track { display:flex; flex-direction:column; gap:5px; margin-top:8px; padding-top:8px; border-top:1px solid var(--line); }
+.prize-header { display:flex; justify-content:space-between; align-items:baseline; }
+.prize-label { font-size:9px; font-weight:700; letter-spacing:.8px; text-transform:uppercase; color:var(--dim); }
+.prize-count { font-size:20px; font-weight:800; font-variant-numeric:tabular-nums; line-height:1; }
+.prize-total { font-size:11px; font-weight:600; color:var(--dim); }
+.prize-dots { display:flex; gap:3px; flex-wrap:wrap; }
+.prize-track--bot .prize-count { color:var(--blue); }
+.prize-track--you .prize-count { color:var(--accent); }
+.prize { width:16px; height:16px; border-radius:50%; border:2px solid #1a2138; position:relative;
          background:linear-gradient(#d64d4d 44%, #1a2138 44%, #1a2138 56%, #dfe4f5 56%);
          box-shadow:0 2px 4px rgba(0,0,0,.45);
          transition:transform .3s ease-out, opacity .3s ease-out, filter .3s ease-out; }
-.prize::after { content:''; position:absolute; inset:0; margin:auto; width:7px; height:7px; border-radius:50%; background:#dfe4f5; border:2px solid #1a2138; }
-.prize.taken { opacity:.28; transform:scale(.8); filter:grayscale(1); box-shadow:none; }
+.prize::after { content:''; position:absolute; inset:0; margin:auto; width:5px; height:5px; border-radius:50%; background:#dfe4f5; border:1.5px solid #1a2138; }
+.prize-track--bot .prize:not(.taken) { background:linear-gradient(var(--blue) 44%, #1a2138 44%, #1a2138 56%, #dfe4f5 56%); border-color:rgba(95,140,255,.5); }
+.prize-track--bot .prize:not(.taken)::after { background:#dfe4f5; }
+.prize-track--you .prize:not(.taken) { background:linear-gradient(var(--accent) 44%, #1a2138 44%, #1a2138 56%, #dfe4f5 56%); border-color:rgba(245,185,66,.5); }
+.prize-track--you .prize:not(.taken)::after { background:#dfe4f5; }
+.prize.taken { opacity:.25; transform:scale(.75); filter:grayscale(1); box-shadow:none; }
+/* bot pensando: três pontos pulsantes no painel do oponente */
+.bot-thinking { display:flex; gap:4px; align-items:center; justify-content:center; margin-top:3px; height:14px; }
+.bot-thinking span { display:inline-block; width:5px; height:5px; border-radius:50%; background:var(--blue); opacity:0; animation:bdot 1.1s ease-in-out infinite; }
+.bot-thinking span:nth-child(2) { animation-delay:.22s; }
+.bot-thinking span:nth-child(3) { animation-delay:.44s; }
+@keyframes bdot { 0%,70%,100% { opacity:0; transform:translateY(0); } 35% { opacity:1; transform:translateY(-3px); } }
 
 /* ---- arena central (batalha estilo Game Boy) ---- */
 #center { display:flex; flex-direction:column; gap:6px; min-width:0; min-height:0; }
@@ -271,7 +286,7 @@ button.primary { background:var(--accent); color:#1a1a1a; font-weight:700; borde
 .hud-status.you-turn { border-color:rgba(245,185,66,.55); box-shadow:0 0 14px rgba(245,185,66,.18); }
 .hud-status.bot-turn { border-color:rgba(95,140,255,.45); box-shadow:0 0 14px rgba(95,140,255,.14); }
 /* timer é o dado vivo do card: grande, tabular, peso máximo */
-.hud-status .timer { font-size:26px; font-weight:800; color:var(--txt); line-height:1; letter-spacing:.5px; }
+.hud-status .timer { font-size:20px; font-weight:800; color:var(--txt); line-height:1; letter-spacing:.5px; }
 .hud-turnline { color:var(--dim); font-size:11px; font-weight:600; }
 /* ferramentas: meta-ações — ghost buttons discretos, sem competir com o jogo */
 .toolstack { display:flex; flex-direction:column; gap:4px; }
@@ -457,6 +472,7 @@ button.primary { background:var(--accent); color:#1a1a1a; font-weight:700; borde
   #handtray .card, .hpbar i, .hud-bar i, .prize, .pp, #preview, .hud-status, .tool, #endturn { transition:none; }
   #endturn:hover { transform:none; }
   #winner, .winner-box { animation:none; }
+  .bot-thinking span { animation:none; opacity:1; }
 }
 
 /* ---- painel de preview no hover ---- */

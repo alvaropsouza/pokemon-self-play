@@ -9,12 +9,13 @@ import (
 func TestEffectDBOverlay(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "effects.json")
-	os.WriteFile(path, []byte(`{
+	if err := os.WriteFile(path, []byte(`{
 		"Search your deck for weirdness.": {"ops":[{"kind":"draw","n":2}], "source":"llm"},
 		"Truly manual effect.": {"manual":true, "source":"llm"},
 		"Broken entry.": {"ops":[{"kind":"nonsense"}], "source":"llm"}
-	}`), 0o644)
-
+	}`), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	if err := LoadEffectDB(path); err != nil {
 		t.Fatal(err)
 	}

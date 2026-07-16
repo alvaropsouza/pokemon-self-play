@@ -108,7 +108,7 @@ func (s *server) handleNew(w http.ResponseWriter, r *http.Request) {
 	}
 	req.MyType = "Fire"
 	req.BotType = "Water"
-	json.NewDecoder(r.Body).Decode(&req)
+	_ = json.NewDecoder(r.Body).Decode(&req)
 	if req.Seed <= 0 {
 		req.Seed = time.Now().UnixNano()
 	}
@@ -278,7 +278,7 @@ func safeHandler(fn http.HandlerFunc) http.HandlerFunc {
 				log.Printf("[panic] %s %s: %v", r.Method, r.URL.Path, rec)
 				w.Header().Set("Content-Type", "application/json; charset=utf-8")
 				w.WriteHeader(http.StatusInternalServerError)
-				json.NewEncoder(w).Encode(map[string]any{"error": fmt.Sprintf("panic: %v", rec)})
+				_ = json.NewEncoder(w).Encode(map[string]any{"error": fmt.Sprintf("panic: %v", rec)})
 			}
 		}()
 		fn(w, r)

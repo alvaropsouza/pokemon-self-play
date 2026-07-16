@@ -209,7 +209,7 @@ func scanEffects(db *sql.DB, store *cards.Store) error {
 			stale = append(stale, text)
 		}
 	}
-	rows.Close()
+	_ = rows.Close()
 	if err := rows.Err(); err != nil {
 		return err
 	}
@@ -376,7 +376,10 @@ func createIssues(db *sql.DB) error {
 		}
 		created++
 	}
-	rows.Close()
+	_ = rows.Close()
+	if err := rows.Err(); err != nil {
+		return err
+	}
 
 	uiRows, err := db.Query(`
 		SELECT op_kind, description, suggestion, files
@@ -400,7 +403,10 @@ func createIssues(db *sql.DB) error {
 		}
 		created++
 	}
-	uiRows.Close()
+	_ = uiRows.Close()
+	if err := uiRows.Err(); err != nil {
+		return err
+	}
 
 	fmt.Printf("%d issues criadas no GitHub\n", created)
 	return nil

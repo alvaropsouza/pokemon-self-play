@@ -82,7 +82,10 @@ func (c *TCGdexClient) get(path string, out any) error {
 		body, _ := io.ReadAll(io.LimitReader(resp.Body, 512))
 		return fmt.Errorf("GET %s: status %d: %s", url, resp.StatusCode, body)
 	}
-	return json.NewDecoder(resp.Body).Decode(out)
+	if err := json.NewDecoder(resp.Body).Decode(out); err != nil {
+		return fmt.Errorf("decode %s: %w", url, err)
+	}
+	return nil
 }
 
 var errNotFound = fmt.Errorf("not found")

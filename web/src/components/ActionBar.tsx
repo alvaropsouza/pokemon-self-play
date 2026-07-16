@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactElement } from 'react'
+import { type ReactElement } from 'react'
 import type { CardView, GameState } from '../api'
 import type { Sel } from '../api'
 import { energyDotStyle } from '../energy'
@@ -18,17 +18,6 @@ export function canPay(cost: string[] | null, energies: CardView[]): boolean {
   return energies.length - used.size >= cost.filter(c => c === 'Colorless').length
 }
 
-export function TurnTimer({ turn, current }: { turn: number; current: number }) {
-  const [sec, setSec] = useState(0)
-  useEffect(() => {
-    setSec(0)
-    const id = setInterval(() => setSec(v => v + 1), 1000)
-    return () => clearInterval(id)
-  }, [turn, current])
-  const mm = String(Math.floor(sec / 60)).padStart(2, '0')
-  const ss = String(sec % 60).padStart(2, '0')
-  return <span className="timer">{mm}:{ss}</span>
-}
 
 // Custo de energia como bolinhas coloridas dentro do botão de ataque.
 export function EnergyCost({ cost }: { cost: string[] | null }) {

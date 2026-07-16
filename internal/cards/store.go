@@ -25,7 +25,7 @@ func Load(path string) (*Store, error) {
 		return NewStore(), nil
 	}
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("read %s: %w", path, err)
 	}
 	s := NewStore()
 	if err := json.Unmarshal(data, s); err != nil {
@@ -37,17 +37,20 @@ func Load(path string) (*Store, error) {
 // Save grava a base em disco de forma atômica (escreve em .tmp e renomeia).
 func (s *Store) Save(path string) error {
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
-		return err
+		return fmt.Errorf("mkdir %s: %w", filepath.Dir(path), err)
 	}
 	data, err := json.MarshalIndent(s, "", "  ")
 	if err != nil {
-		return err
+		return fmt.Errorf("marshal store: %w", err)
 	}
 	tmp := path + ".tmp"
 	if err := os.WriteFile(tmp, data, 0o644); err != nil {
-		return err
+		return fmt.Errorf("write %s: %w", tmp, err)
 	}
-	return os.Rename(tmp, path)
+	if err := os.Rename(tmp, path); err != nil {
+		return fmt.Errorf("rename %s: %w", tmp, err)
+	}
+	return nil
 }
 
 // Put insere ou substitui uma carta.

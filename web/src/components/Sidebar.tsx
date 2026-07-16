@@ -1,43 +1,61 @@
+import { useEffect, useRef, useState } from 'react'
 import type { SideView } from '../api'
-import { TurnTimer, PHASE_LABEL } from './ActionBar'
+import { PHASE_LABEL } from './ActionBar'
 
-function PrizeColumn({ side }: { side: SideView }) {
-  const n = side.prizes
+function MatchTimer() {
+  const startRef = useRef(Date.now())
+  const [sec, setSec] = useState(0)
+  useEffect(() => {
+    const id = setInterval(() => setSec(Math.floor((Date.now() - startRef.current) / 1000)), 1000)
+    return () => clearInterval(id)
+  }, [])
+  const mm = String(Math.floor(sec / 60)).padStart(2, '0')
+  const ss = String(sec % 60).padStart(2, '0')
+  return <span className="timer">{mm}:{ss}</span>
+}
+
+function PrizeBalls({ count, variant }: { count: number; variant: 'bot' | 'you' }) {
   return (
-    <div className="prizes">
-      <h4>PRÊMIOS</h4>
-      <div className="col" role="img"
-        aria-label={`${n} prêmio${n !== 1 ? 's' : ''} restante${n !== 1 ? 's' : ''}`}>
+    <div role="group" className={`prize-track prize-track--${variant}`} aria-label={`${count} prêmios restantes`}>
+      <div className="prize-header">
+        <span className="prize-label">Prêmios</span>
+        <span className="prize-count">{count}<span className="prize-total">/6</span></span>
+      </div>
+      <div className="prize-dots">
         {Array.from({ length: 6 }, (_, i) => (
-          <div key={i} className={'prize' + (i >= n ? ' taken' : '')} aria-hidden="true" />
+          <div key={i} className={'prize' + (i >= count ? ' taken' : '')} aria-hidden="true" />
         ))}
       </div>
     </div>
   )
 }
 
-export function Sidebar({ you, bot, current, turn, phase }: {
-  you: SideView; bot: SideView; current: number; turn: number; phase: string
+export function Sidebar({ you, bot, current, turn, phase, botThinking }: {
+  you: SideView; bot: SideView; current: number; turn: number; phase: string; botThinking: boolean
 }) {
+  const isBotActive = current === 1 || botThinking
   return (
     <aside id="left">
-      <div className={'pp bot' + (current === 1 ? ' turn' : '')}>
+      <div className={'pp bot' + (isBotActive ? ' turn' : '')}>
         <div className="avatar">B</div>
         <div className="who">OPONENTE</div>
-        <div className="sub">Bot · {bot.prizes} prêmios</div>
+        {botThinking
+          ? <div className="bot-thinking" aria-label="Bot jogando"><span /><span /><span /></div>
+          : <div className="sub">Bot</div>
+        }
+        <PrizeBalls count={bot.prizes} variant="bot" />
       </div>
-      <PrizeColumn side={bot} />
-      <div className={'pp you' + (current === 0 ? ' turn' : '')}>
+      <div className={'pp you' + (!isBotActive ? ' turn' : '')}>
         <div className="avatar">T</div>
         <div className="who">VOCÊ</div>
-        <div className="sub">Treinador · {you.prizes} prêmios</div>
+        <div className="sub">Treinador</div>
+        <PrizeBalls count={you.prizes} variant="you" />
       </div>
-      <PrizeColumn side={you} />
-      <div className={'hud-status ' + (current === 0 ? 'you-turn' : 'bot-turn')}>
-        <span className={'vez ' + (current === 0 ? 'you' : 'bot')}>
-          {current === 0 ? 'SUA VEZ' : 'VEZ DO BOT'}
+      <div className={'hud-status ' + (isBotActive ? 'bot-turn' : 'you-turn')}>
+        <span className={'vez ' + (isBotActive ? 'bot' : 'you')}>
+          {botThinking ? 'BOT JOGANDO' : isBotActive ? 'VEZ DO BOT' : 'SUA VEZ'}
         </span>
-        <TurnTimer turn={turn} current={current} />
+        <MatchTimer />
         <div className="hud-turnline">Turno {turn} · {PHASE_LABEL[phase] ?? phase}</div>
       </div>
     </aside>

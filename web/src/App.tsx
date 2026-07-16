@@ -107,13 +107,14 @@ function HandTray({ s, sel, onSelect }: {
 
 // Painel lateral direito: status da vez + ferramentas + Terminar Turno.
 // Substitui a antiga barra horizontal entre tabuleiro e mão.
-function HudRail({ s, pane, setPane, endTurn }: {
+function HudRail({ s, pane, setPane, endTurn, botThinking }: {
   s: GameState
   pane: Pane
   setPane: (p: Pane) => void
   endTurn: () => void
+  botThinking: boolean
 }) {
-  const myTurn = s.current === 0
+  const myTurn = s.current === 0 && !botThinking
   const toggle = (p: Pane) => setPane(pane === p ? '' : p)
   const tool = (p: Pane, label: string) => (
     <button type="button" className={'tool' + (pane === p ? ' on' : '')}
@@ -461,6 +462,8 @@ export default function App() {
   const [errN, setErrN] = useState(0) // nonce: mesmo erro repetido gera novo toast
   const [pane, setPane] = useState<Pane>('')
   const [preview, setPreview] = useState<Preview | null>(null)
+  const [botThinking, setBotThinking] = useState(false)
+  const botT0 = useRef(0)
   const publishPreview = useCallback((c: CardView | null, rect?: DOMRect) =>
     setPreview(c && rect ? { card: c, rect } : null), [])
 
@@ -495,18 +498,17 @@ export default function App() {
     }).catch(e => setLobbyErr(netErr(e)))
   }, [])
 
-  const post = useCallback((body: Record<string, unknown>) => {
+  const post = useCallback((body: Record<string, unknown>, onSettled?: () => void) => {
     postAction(body).then(j => {
       setErr(j.error ?? '')
       if (j.error) setErrN(n => n + 1)
-      // Guarda contra panic do servidor: resposta sem `phase` não atualiza o estado
-      // (mantém o tabuleiro visível em vez de crashar no render).
       if (j.phase) {
         setS(j)
         playEvents(j.events)
       }
       setSel(null)
-    }).catch(e => setErr(netErr(e)))
+      onSettled?.()
+    }).catch(e => { setErr(netErr(e)); onSettled?.() })
   }, [])
 
   const select = useCallback((kind: 'hand' | 'active' | 'bench', idx: number) => {
@@ -560,7 +562,7 @@ export default function App() {
   return (
     <PreviewCtx.Provider value={publishPreview}>
       <div id="app">
-        <Sidebar you={s.you} bot={s.bot} current={s.current} turn={s.turn} phase={s.phase} />
+        <Sidebar you={s.you} bot={s.bot} current={s.current} turn={s.turn} phase={s.phase} botThinking={botThinking} />
         <div id="center">
           <BotMat side={s.bot} stadium={s.stadium} />
           <YouMat side={s.you} sel={sel} onSelect={select}
@@ -589,7 +591,16 @@ export default function App() {
             <HandTray s={s} sel={sel} onSelect={i => select('hand', i)} />
           </div>
         </div>
-        <HudRail s={s} pane={pane} setPane={setPane} endTurn={() => post({ action: 'end_turn' })} />
+        <HudRail s={s} pane={pane} setPane={setPane} botThinking={botThinking}
+          endTurn={() => {
+            setBotThinking(true)
+            botT0.current = Date.now()
+            post({ action: 'end_turn' }, () => {
+              const rem = 600 - (Date.now() - botT0.current)
+              if (rem > 0) setTimeout(() => setBotThinking(false), rem)
+              else setBotThinking(false)
+            })
+          }} />
         <Toasts s={s} err={err} errN={errN} />
         <Drawer pane={pane} s={s} post={post} onExit={() => { setPane(''); setS(null) }} />
         <CardPreview p={preview} />

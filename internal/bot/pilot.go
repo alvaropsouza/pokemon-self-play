@@ -157,6 +157,7 @@ func supporterScore(g *game.Game, player int, ops []game.Op) int {
 			if !op.OnSelf {
 				score += 10
 			}
+		default:
 		}
 	}
 	if len(ps.Hand) > 5 {
@@ -246,6 +247,7 @@ func attackScore(g *game.Game, player int, pk *game.PokemonInPlay, atkIdx int) i
 			}
 		case game.OpHealSelf:
 			score += op.N / 4
+		default:
 		}
 	}
 	return score
