@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import type { SideView } from '../api'
 import { PHASE_LABEL } from './ActionBar'
+import type { Pane } from './Drawer'
 
 function MatchTimer() {
   const startRef = useRef(Date.now())
@@ -53,10 +54,19 @@ function PrizeBalls({ count, variant }: { count: number; variant: 'bot' | 'you' 
   )
 }
 
-export function Sidebar({ you, bot, current, turn, phase, botThinking }: {
+export function Sidebar({ you, bot, current, turn, phase, botThinking, pane, setPane, endTurn }: {
   you: SideView; bot: SideView; current: number; turn: number; phase: string; botThinking: boolean
+  pane: Pane; setPane: (p: Pane) => void; endTurn: () => void
 }) {
   const isBotActive = current === 1 || botThinking
+  const myTurn = current === 0 && !botThinking
+  const toggle = (p: Pane) => setPane(pane === p ? '' : p)
+  const tool = (p: Pane, label: string) => (
+    <button type="button" className={'tool' + (pane === p ? ' on' : '')}
+      aria-pressed={pane === p} onClick={() => toggle(p)}>
+      {label}
+    </button>
+  )
   return (
     <aside id="left">
       <div className={'pp bot' + (isBotActive ? ' turn' : '')}>
@@ -81,6 +91,15 @@ export function Sidebar({ you, bot, current, turn, phase, botThinking }: {
         <MatchTimer />
         <div className="hud-turnline">Turno {turn} · {PHASE_LABEL[phase] ?? phase}</div>
       </div>
+      <div className="toolstack">
+        {tool('cfg', 'Partida')}
+        {tool('log', 'Log')}
+        {tool('arb', 'Arbitrar')}
+      </div>
+      <div className="spacer" />
+      <button id="endturn" onClick={endTurn} disabled={!myTurn || phase !== 'turn'}>
+        TERMINAR<br />TURNO
+      </button>
     </aside>
   )
 }

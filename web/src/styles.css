@@ -12,7 +12,7 @@
      painel lateral + pill flutuante, devolvendo ~40px de altura às cartas.
      Termo em vw protege telas estreitas: banco de 5 cartas + pilhas + sidebars
      (o painel direito agora tem 172px). */
-  --cw:clamp(66px, min(calc((100vh - 165px) / 8.3), calc((100vw - 301px) / 7.5)), 200px);
+  --cw:clamp(66px, min(calc((100vh - 165px) / 8.3), calc((100vw - 203px) / 7.5)), 200px);
 }
 * { box-sizing:border-box; }
 :focus-visible { outline:2px solid var(--accent); outline-offset:2px; border-radius:4px; }
@@ -21,7 +21,7 @@ body {
   margin:0; color:var(--txt); font:13px/1.4 system-ui,sans-serif; overflow:hidden;
   background:radial-gradient(1100px 700px at 50% 38%, #12121e, var(--bg) 75%);
 }
-#app { display:grid; grid-template-columns:132px 1fr 88px; gap:10px; padding:10px 12px 6px; height:100vh; }
+#app { display:grid; grid-template-columns:132px 1fr; gap:10px; padding:10px 12px 6px; height:100vh; }
 
 /* ---- sidebar esquerda: jogadores + prêmios ---- */
 #left { display:flex; flex-direction:column; gap:10px; overflow-y:auto; }
@@ -288,8 +288,7 @@ button.primary { background:var(--accent); color:#1a1a1a; font-weight:700; borde
 #handtray .cardbox:hover .card { transform:translateY(-14px) scale(1.05); box-shadow:0 8px 20px rgba(0,0,0,.5); }
 #handtray .empty-hand { color:var(--dim); padding:0 10px; align-self:center; }
 
-/* ---- painel lateral direito: HUD da partida ---- */
-#right { display:flex; flex-direction:column; gap:12px; }
+/* ---- HUD da partida: status da vez + ferramentas + Terminar Turno (na sidebar esquerda) ---- */
 /* status da vez: card herói do painel — comete na cor de quem joga */
 .hud-status { background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:12px 6px 10px; text-align:center; display:flex; flex-direction:column; align-items:center; gap:6px; transition:border-color .2s, box-shadow .2s; }
 .hud-status.you-turn { border-color:rgba(245,185,66,.55); box-shadow:0 0 14px rgba(245,185,66,.18); }
@@ -310,7 +309,7 @@ button.primary { background:var(--accent); color:#1a1a1a; font-weight:700; borde
 #endturn:hover { background:var(--danger2); transform:translateY(-1px); box-shadow:0 6px 14px rgba(192,57,43,.4), inset 0 1px 0 rgba(255,255,255,.14); }
 #endturn:active { transform:translateY(0); box-shadow:0 2px 8px rgba(192,57,43,.35); }
 #endturn:disabled { background:#3a2430; color:#8a6a72; cursor:default; box-shadow:none; transform:none; }
-#right .spacer { flex:1; }
+#left .spacer { flex:1; min-height:8px; }
 
 /* ---- toasts: mensagens temporárias (erros e eventos do jogo) ---- */
 #toasts { position:fixed; top:14px; left:50%; transform:translateX(-50%); z-index:25;
@@ -323,7 +322,7 @@ button.primary { background:var(--accent); color:#1a1a1a; font-weight:700; borde
 @keyframes toastin { from { opacity:0; transform:translateY(-8px); } }
 
 /* ---- gaveta lateral (log / arbitragem / config) ---- */
-#drawer { position:fixed; right:110px; top:10px; bottom:10px; width:320px; background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:12px; display:flex; flex-direction:column; z-index:10; box-shadow:-6px 0 24px rgba(0,0,0,.5); }
+#drawer { position:fixed; left:154px; top:10px; bottom:10px; width:320px; background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:12px; display:flex; flex-direction:column; z-index:10; box-shadow:6px 0 24px rgba(0,0,0,.5); }
 #drawer h3 { margin:0 0 8px; font-size:12px; color:var(--dim); text-transform:uppercase; letter-spacing:1px; }
 #log { flex:1; overflow-y:auto; font-size:12px; color:var(--dim); }
 #log div { padding:2px 0; border-bottom:1px solid #1c1c2a; }
@@ -470,9 +469,9 @@ button.primary { background:var(--accent); color:#1a1a1a; font-weight:700; borde
 
 /* telas estreitas: sidebars encolhem e o orçamento horizontal de --cw acompanha */
 @media (max-width: 900px) {
-  :root { --cw:clamp(56px, min(calc((100vh - 165px) / 8.3), calc((100vw - 228px) / 7.5)), 200px); }
-  #app { grid-template-columns:90px 1fr 72px; gap:8px; padding:8px 8px 4px; }
-  #drawer { right:88px; width:min(320px, 55vw); }
+  :root { --cw:clamp(56px, min(calc((100vh - 165px) / 8.3), calc((100vw - 148px) / 7.5)), 200px); }
+  #app { grid-template-columns:90px 1fr; gap:8px; padding:8px 8px 4px; }
+  #drawer { left:106px; width:min(320px, 55vw); }
 }
 
 @media (prefers-reduced-motion: reduce) {

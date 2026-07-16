@@ -105,38 +105,6 @@ function HandTray({ s, sel, onSelect }: {
   )
 }
 
-// Painel lateral direito: status da vez + ferramentas + Terminar Turno.
-// Substitui a antiga barra horizontal entre tabuleiro e mão.
-function HudRail({ s, pane, setPane, endTurn, botThinking }: {
-  s: GameState
-  pane: Pane
-  setPane: (p: Pane) => void
-  endTurn: () => void
-  botThinking: boolean
-}) {
-  const myTurn = s.current === 0 && !botThinking
-  const toggle = (p: Pane) => setPane(pane === p ? '' : p)
-  const tool = (p: Pane, label: string) => (
-    <button type="button" className={'tool' + (pane === p ? ' on' : '')}
-      aria-pressed={pane === p} onClick={() => toggle(p)}>
-      {label}
-    </button>
-  )
-  return (
-    <aside id="right">
-      <div className="toolstack">
-        {tool('cfg', 'Partida')}
-        {tool('log', 'Log')}
-        {tool('arb', 'Arbitrar')}
-      </div>
-      <div className="spacer" />
-      <button id="endturn" onClick={endTurn} disabled={!myTurn || s.phase !== 'turn'}>
-        TERMINAR<br />TURNO
-      </button>
-    </aside>
-  )
-}
-
 // Toasts temporários: erros de ação e eventos novos do log (efeitos, nocautes).
 // Histórico completo continua no painel de Log.
 function Toasts({ s, err, errN }: { s: GameState; err: string; errN: number }) {
@@ -562,7 +530,17 @@ export default function App() {
   return (
     <PreviewCtx.Provider value={publishPreview}>
       <div id="app">
-        <Sidebar you={s.you} bot={s.bot} current={s.current} turn={s.turn} phase={s.phase} botThinking={botThinking} />
+        <Sidebar you={s.you} bot={s.bot} current={s.current} turn={s.turn} phase={s.phase} botThinking={botThinking}
+          pane={pane} setPane={setPane}
+          endTurn={() => {
+            setBotThinking(true)
+            botT0.current = Date.now()
+            post({ action: 'end_turn' }, () => {
+              const rem = 600 - (Date.now() - botT0.current)
+              if (rem > 0) setTimeout(() => setBotThinking(false), rem)
+              else setBotThinking(false)
+            })
+          }} />
         <div id="center">
           <BotMat side={s.bot} stadium={s.stadium} />
           <YouMat side={s.you} sel={sel} onSelect={select}
@@ -591,16 +569,6 @@ export default function App() {
             <HandTray s={s} sel={sel} onSelect={i => select('hand', i)} />
           </div>
         </div>
-        <HudRail s={s} pane={pane} setPane={setPane} botThinking={botThinking}
-          endTurn={() => {
-            setBotThinking(true)
-            botT0.current = Date.now()
-            post({ action: 'end_turn' }, () => {
-              const rem = 600 - (Date.now() - botT0.current)
-              if (rem > 0) setTimeout(() => setBotThinking(false), rem)
-              else setBotThinking(false)
-            })
-          }} />
         <Toasts s={s} err={err} errN={errN} />
         <Drawer pane={pane} s={s} post={post} onExit={() => { setPane(''); setS(null) }} />
         <CardPreview p={preview} />
