@@ -8,7 +8,6 @@ import { Sidebar } from './components/Sidebar'
 import { BotMat, YouMat } from './components/Mat'
 import { AttackMenu, ContextBar } from './components/ActionBar'
 import { Card } from './components/Card'
-import { Drawer, type Pane } from './components/Drawer'
 
 function netErr(e: unknown): string {
   const msg = String(e)
@@ -428,7 +427,6 @@ export default function App() {
   const [sel, setSel] = useState<Sel>(null)
   const [err, setErr] = useState('')
   const [errN, setErrN] = useState(0) // nonce: mesmo erro repetido gera novo toast
-  const [pane, setPane] = useState<Pane>('')
   const [preview, setPreview] = useState<Preview | null>(null)
   const [botThinking, setBotThinking] = useState(false)
   const botT0 = useRef(0)
@@ -442,14 +440,6 @@ export default function App() {
       setConnectErr(netErr(e))
     })
   }, [])
-
-  // Escape fecha a gaveta lateral (log/arbitragem/config).
-  useEffect(() => {
-    if (!pane) return
-    const h = (e: KeyboardEvent) => { if (e.key === 'Escape') setPane('') }
-    window.addEventListener('keydown', h)
-    return () => window.removeEventListener('keydown', h)
-  }, [pane])
 
   const startGame = useCallback((c: GameConfig) => {
     setConfig(c)
@@ -531,7 +521,7 @@ export default function App() {
     <PreviewCtx.Provider value={publishPreview}>
       <div id="app">
         <Sidebar you={s.you} bot={s.bot} current={s.current} turn={s.turn} phase={s.phase} botThinking={botThinking}
-          pane={pane} setPane={setPane}
+          onExit={() => setS(null)}
           endTurn={() => {
             setBotThinking(true)
             botT0.current = Date.now()
@@ -570,7 +560,6 @@ export default function App() {
           </div>
         </div>
         <Toasts s={s} err={err} errN={errN} />
-        <Drawer pane={pane} s={s} post={post} onExit={() => { setPane(''); setS(null) }} />
         <CardPreview p={preview} />
         {s.pendingChoice && <ChoiceOverlay key={s.log?.length} pc={s.pendingChoice} post={post} />}
         <WinnerOverlay
