@@ -189,6 +189,34 @@ func (g *Game) PlayStadium(p, handIdx int) error {
 	return nil
 }
 
+func (g *Game) UseAbility(player, abilitySlot, targetSlot int) error {
+	if err := g.requireTurn(player); err != nil {
+		return err
+	}
+	pk, err := g.target(player, abilitySlot)
+	if err != nil {
+		return err
+	}
+	cardID := pk.TopID()
+	h, ok := abilityDB[cardID]
+	if !ok {
+		return fmt.Errorf("%s não tem Habilidade implementada", g.Card(cardID).Name.EN)
+	}
+	ps := g.Players[player]
+	if ps.AbilitiesUsed == nil {
+		ps.AbilitiesUsed = map[int]bool{}
+	}
+	if ps.AbilitiesUsed[abilitySlot] {
+		return fmt.Errorf("Habilidade já usada neste turno")
+	}
+	if err := h(g, player, abilitySlot, targetSlot); err != nil {
+		return err
+	}
+	ps.AbilitiesUsed[abilitySlot] = true
+	g.logf("jogador %d: usa Habilidade de %s", player+1, g.Card(cardID).Name.EN)
+	return nil
+}
+
 func (g *Game) Retreat(p, benchIdx int, energyIdxs []int) error {
 	if err := g.requireTurn(p); err != nil {
 		return err
@@ -272,6 +300,7 @@ func (g *Game) finishTurn() {
 	ps.SupporterPlayed = false
 	ps.StadiumPlayed = false
 	ps.Retreated = false
+	ps.AbilitiesUsed = nil
 
 	g.emit(Trigger{Kind: TrigTurnEnded, Player: g.Current, Slot: ActiveSlot})
 	g.checkup()

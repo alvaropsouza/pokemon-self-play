@@ -215,6 +215,7 @@ func parseCommand(defaultPlayer int, req actionReq) (game.Command, error) {
 	case "arb_draw":       return game.ArbDrawCmd{Player: req.Player, Amount: req.Amount}, nil
 	case "arb_switch":     return game.ArbSwitchCmd{Player: req.Player, BenchIdx: req.Bench}, nil
 	case "arb_shuffle":    return game.ArbShuffleCmd{Player: req.Player}, nil
+	case "use_ability":   return game.UseAbilityCmd{Player: p, AbilitySlot: req.Slot, Target: req.Bench}, nil
 	default:               return nil, fmt.Errorf("ação desconhecida: %q", req.Action)
 	}
 }
@@ -317,10 +318,22 @@ func cardJSON(c *cards.Card) map[string]any {
 		atks = append(atks, map[string]any{"name": an, "cost": a.Cost, "damage": a.Damage})
 	}
 	v["attacks"] = atks
+	if len(c.Abilities) > 0 && game.HasAbility(c.ID) {
+		ab := c.Abilities[0]
+		abn := ab.Name.PT
+		if abn == "" {
+			abn = ab.Name.EN
+		}
+		abe := ab.Effect.PT
+		if abe == "" {
+			abe = ab.Effect.EN
+		}
+		v["ability"] = map[string]any{"name": abn, "effect": abe}
+	}
 	return v
 }
 
-func (s *server) pokemonView(p *game.PokemonInPlay) map[string]any {
+func (s *server) pokemonView(p *game.PokemonInPlay, abilityUsed bool) map[string]any {
 	if p == nil {
 		return nil
 	}
@@ -338,21 +351,26 @@ func (s *server) pokemonView(p *game.PokemonInPlay) map[string]any {
 	if p.Burned {
 		conds = append(conds, "burned")
 	}
+	cv := s.cardView(p.TopID())
 	v := map[string]any{
-		"card": s.cardView(p.TopID()), "damage": p.Damage,
+		"card": cv, "damage": p.Damage,
 		"energies": energies, "conditions": conds,
 	}
 	if p.Tool != "" {
 		v["tool"] = s.cardView(p.Tool)
+	}
+	if cv != nil && cv["ability"] != nil {
+		v["abilityUsed"] = abilityUsed
 	}
 	return v
 }
 
 func (s *server) sideView(p int, full bool) map[string]any {
 	ps := s.g.Players[p]
+	used := ps.AbilitiesUsed
 	var bench []map[string]any
-	for _, b := range ps.Bench {
-		bench = append(bench, s.pokemonView(b))
+	for i, b := range ps.Bench {
+		bench = append(bench, s.pokemonView(b, used[i]))
 	}
 	var discard []map[string]any
 	for _, id := range ps.Discard {
@@ -360,7 +378,7 @@ func (s *server) sideView(p int, full bool) map[string]any {
 	}
 	v := map[string]any{
 		"deck": len(ps.Deck), "prizes": len(ps.Prizes), "prizesTaken": ps.PrizesTaken,
-		"active": s.pokemonView(ps.Active), "bench": bench, "discard": discard,
+		"active": s.pokemonView(ps.Active, used[game.ActiveSlot]), "bench": bench, "discard": discard,
 		"handCount": len(ps.Hand),
 	}
 	if full {
@@ -396,11 +414,11 @@ func (s *server) stateJSON() map[string]any {
 		switch pc.Kind {
 		case game.ChoiceSwitchSelf:
 			for _, benchIdx := range pc.Candidates {
-				cand = append(cand, s.pokemonView(g.Players[human].Bench[benchIdx]))
+				cand = append(cand, s.pokemonView(g.Players[human].Bench[benchIdx], false))
 			}
 		case game.ChoiceSwitchOpp:
 			for _, benchIdx := range pc.Candidates {
-				cand = append(cand, s.pokemonView(g.Players[botP].Bench[benchIdx]))
+				cand = append(cand, s.pokemonView(g.Players[botP].Bench[benchIdx], false))
 			}
 		case game.ChoiceDiscardHand:
 			for _, hi := range pc.Candidates {

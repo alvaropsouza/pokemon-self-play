@@ -19,6 +19,7 @@ type AttackCmd        struct{ Player, AtkIdx int }
 type PromoteCmd       struct{ Player, BenchIdx int }
 type EndTurnCmd       struct{ Player int }
 type ResolveChoiceCmd struct{ Player int; Picks []int }
+type UseAbilityCmd    struct{ Player, AbilitySlot, Target int }
 type ArbDamageCmd     struct{ Player, Slot, Amount int }
 type ArbHealCmd       struct{ Player, Slot, Amount int }
 type ArbConditionCmd  struct{ Player int; Condition string }
@@ -40,6 +41,7 @@ func (c AttackCmd)        Execute(g *Game) error { return g.Attack(c.Player, c.A
 func (c PromoteCmd)       Execute(g *Game) error { return g.Promote(c.Player, c.BenchIdx) }
 func (c EndTurnCmd)       Execute(g *Game) error { return g.EndTurn(c.Player) }
 func (c ResolveChoiceCmd) Execute(g *Game) error { return g.ResolveChoice(c.Player, c.Picks) }
+func (c UseAbilityCmd)   Execute(g *Game) error { return g.UseAbility(c.Player, c.AbilitySlot, c.Target) }
 func (c ArbDamageCmd)    Execute(g *Game) error { return g.ApplyDamage(c.Player, c.Slot, c.Amount) }
 func (c ArbHealCmd)      Execute(g *Game) error { return g.Heal(c.Player, c.Slot, c.Amount) }
 func (c ArbConditionCmd) Execute(g *Game) error { return g.SetCondition(c.Player, c.Condition) }

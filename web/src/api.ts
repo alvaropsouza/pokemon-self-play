@@ -6,6 +6,11 @@ export interface Attack {
   damage: string
 }
 
+export interface Ability {
+  name: string
+  effect: string
+}
+
 export interface CardView {
   id: string
   name: string
@@ -17,6 +22,7 @@ export interface CardView {
   hp: number
   retreat: number
   attacks: Attack[] | null
+  ability?: Ability
 }
 
 export interface PokemonView {
@@ -25,6 +31,7 @@ export interface PokemonView {
   energies: CardView[] | null
   conditions: string[]
   tool?: CardView
+  abilityUsed?: boolean
 }
 
 export interface SideView {
@@ -90,6 +97,7 @@ export type Sel =
   | { kind: 'hand' | 'active' | 'bench'; idx: number }
   | { kind: 'pending'; action: string; handIdx: number }
   | { kind: 'retreating'; benchIdx: number | null; energyIdxs: number[] }
+  | { kind: 'ability'; slot: number }
   | null
 
 async function readJSON<T>(r: Response): Promise<T> {

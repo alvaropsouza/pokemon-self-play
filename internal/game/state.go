@@ -77,6 +77,7 @@ type PlayerState struct {
 	SupporterPlayed bool
 	StadiumPlayed   bool
 	Retreated       bool
+	AbilitiesUsed   map[int]bool
 
 	setupReady bool
 }

@@ -1,5 +1,7 @@
 package game
 
+import "fmt"
+
 type TriggerKind string
 
 const (
@@ -42,6 +44,30 @@ func riskyRuins(g *Game, _, _ int, t Trigger) {
 
 func HasTrigger(cardID string) bool {
 	_, ok := triggerDB[cardID]
+	return ok
+}
+
+type abilityFunc func(g *Game, owner, abilitySlot, targetSlot int) error
+
+var abilityDB = map[string]abilityFunc{
+	"me01-011": shuckleSweetSap,
+}
+
+func shuckleSweetSap(g *Game, owner, abilitySlot, targetSlot int) error {
+	pk, err := g.target(owner, abilitySlot)
+	if err != nil {
+		return err
+	}
+	for _, id := range pk.Energies {
+		if providedType(g.Card(id)) == "Grass" {
+			return g.Heal(owner, targetSlot, 30)
+		}
+	}
+	return fmt.Errorf("Shuckle não tem Energia Grass ligada")
+}
+
+func HasAbility(cardID string) bool {
+	_, ok := abilityDB[cardID]
 	return ok
 }
 

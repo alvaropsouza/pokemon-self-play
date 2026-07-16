@@ -66,8 +66,15 @@ export function AttackMenu({ s, sel, setSel, post }: {
   if (sel?.kind === 'pending' || sel?.kind === 'retreating') return null
 
   const firstTurn = s.turn === 1
+  const ability = act.card.ability
   return (
     <div className="movebox">
+      {ability && !act.abilityUsed && (
+        <button className="move ability" onClick={() => setSel({ kind: 'ability', slot: -1 })}>
+          <span className="move-name">✦ {ability.name}</span>
+          <span className="move-dmg">habilidade</span>
+        </button>
+      )}
       {firstTurn
         ? <span className="move-hint">Sem ataque no 1º turno</span>
         : act.card.attacks?.map((a, i) => {
@@ -124,6 +131,12 @@ export function ContextBar({ s, sel, setSel, post }: {
 
   } else if (s.current !== 0) {
     // Turno do bot: o chip no painel lateral já informa; sem pill.
+
+  } else if (sel?.kind === 'ability') {
+    actions.push(
+      <span key="hint" className="pick-hint">↑ Clique no Pokémon alvo da Habilidade</span>,
+      util('Cancelar', () => setSel(null), 'cancel'),
+    )
 
   } else if (sel?.kind === 'pending') {
     // Modo pick: aguardando clique num slot do tabuleiro.
@@ -187,6 +200,15 @@ export function ContextBar({ s, sel, setSel, post }: {
 
   } else {
     // Turno normal.
+    if (sel?.kind === 'active' && s.you.active?.card.ability && !s.you.active.abilityUsed) {
+      actions.push(util(`Habilidade: ${s.you.active.card.ability.name}`, () => setSel({ kind: 'ability', slot: -1 }), 'ability'))
+    }
+    if (sel?.kind === 'bench') {
+      const bk = s.you.bench?.[sel.idx]
+      if (bk?.card.ability && !bk.abilityUsed) {
+        actions.push(util(`Habilidade: ${bk.card.ability.name}`, () => setSel({ kind: 'ability', slot: sel.idx }), 'ability'))
+      }
+    }
     if (sel?.kind === 'hand') {
       const c = s.you.hand![sel.idx]
       if (c.category === 'Energy') {

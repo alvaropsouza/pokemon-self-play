@@ -35,6 +35,12 @@ func (ps *PlayerState) cloneState() *PlayerState {
 	c.Discard = append([]string{}, ps.Discard...)
 	c.Prizes = append([]string{}, ps.Prizes...)
 	c.LostZone = append([]string{}, ps.LostZone...)
+	if len(ps.AbilitiesUsed) > 0 {
+		c.AbilitiesUsed = make(map[int]bool, len(ps.AbilitiesUsed))
+		for k, v := range ps.AbilitiesUsed {
+			c.AbilitiesUsed[k] = v
+		}
+	}
 	if ps.Active != nil {
 		c.Active = ps.Active.clonePkm()
 	}

@@ -216,13 +216,21 @@ function DeckMenu({ decks, sel, setSel, who, onView }: {
           value={q} onChange={e => setQ(e.target.value)} aria-label="Buscar deck" />
         <button type="button" className="dk-random" aria-label="Deck aleatório"
           onClick={() => { setQ(''); setSel(decks[Math.floor(Math.random() * decks.length)].id) }}>
-          🎲
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+            <rect x="1" y="1" width="12" height="12" rx="2.5" stroke="currentColor" strokeWidth="1.4"/>
+            <circle cx="4.5" cy="4.5" r="1" fill="currentColor"/>
+            <circle cx="9.5" cy="4.5" r="1" fill="currentColor"/>
+            <circle cx="4.5" cy="9.5" r="1" fill="currentColor"/>
+            <circle cx="9.5" cy="9.5" r="1" fill="currentColor"/>
+            <circle cx="7" cy="7" r="1" fill="currentColor"/>
+          </svg>
         </button>
       </div>
-      <div className="dk-menu" role="listbox" aria-label={`Decks — ${who === 'you' ? 'você' : 'bot'}`}>
-        {hits.length === 0 && <div className="dk-none">Nenhum deck para “{q}”</div>}
+      <div className="dk-menu" role="radiogroup" aria-label={`Decks — ${who === 'you' ? 'você' : 'bot'}`}
+        aria-live="polite">
+        {hits.length === 0 && <div className="dk-none">Nenhum deck para "{q}"</div>}
         {hits.map(dk => (
-          <button key={dk.id} type="button" role="option" aria-selected={dk.id === d.id}
+          <button key={dk.id} type="button" role="radio" aria-checked={dk.id === d.id}
             className={'dk-row' + (dk.id === d.id ? ' on' : '')}
             style={{ '--el': energyColor(dk.type) } as CSSProperties}
             onClick={() => setSel(dk.id)}>
@@ -351,7 +359,7 @@ function LobbyScreen({ onStart, err }: { onStart: (c: GameConfig) => void; err: 
     <div id="lobby">
       <div className="lobby-box">
         <div className="lobby-head">
-          <div className="lobby-title">Pokémon TCG</div>
+          <h1 className="lobby-title">Pokémon TCG</h1>
           <div className="lobby-sub">Escolha o Battle Deck de cada lado</div>
         </div>
         {!decks && !loadErr && <div className="lobby-sub">Carregando decks…</div>}
@@ -507,6 +515,14 @@ export default function App() {
   }, [])
 
   const select = useCallback((kind: 'hand' | 'active' | 'bench', idx: number) => {
+    // Modo ability: clique no slot completa o alvo da Habilidade.
+    if (sel?.kind === 'ability') {
+      if (kind === 'active' || kind === 'bench') {
+        post({ action: 'use_ability', slot: sel.slot, bench: kind === 'active' ? -1 : idx })
+        setSel(null)
+      }
+      return
+    }
     // Modo pending: clique no slot completa a ação sem prompt().
     if (sel?.kind === 'pending') {
       if (kind === 'active' || kind === 'bench') {
@@ -556,7 +572,7 @@ export default function App() {
             dragBench={!!s.needPromote?.[0]}
             menu={<AttackMenu s={s} sel={sel} setSel={setSel} post={post} />}
             pickMode={
-              sel?.kind === 'pending' ? 'all'
+              sel?.kind === 'pending' || sel?.kind === 'ability' ? 'all'
               : (sel?.kind === 'retreating' && sel.benchIdx === null) ? 'bench'
               : null
             }

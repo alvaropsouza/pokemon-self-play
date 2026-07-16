@@ -1,22 +1,3 @@
-const svgRaw = import.meta.glob('./assets/energy/*.svg', { as: 'raw', eager: true })
-
-function toDataUri(path: string): string {
-  const raw = svgRaw[path] as string | undefined
-  return raw ? 'data:image/svg+xml,' + encodeURIComponent(raw) : ''
-}
-
-const typeToFile: Record<string, string> = {
-  Grass: './assets/energy/grass.svg',
-  Fire: './assets/energy/fire.svg',
-  Water: './assets/energy/water.svg',
-  Lightning: './assets/energy/electric.svg',
-  Psychic: './assets/energy/psychic.svg',
-  Fighting: './assets/energy/fighting.svg',
-  Darkness: './assets/energy/dark.svg',
-  Metal: './assets/energy/steel.svg',
-  Dragon: './assets/energy/dragon.svg',
-  Colorless: './assets/energy/normal.svg',
-}
 
 const sveNum: Record<string, number> = {
   Grass: 1, Fire: 2, Water: 3, Lightning: 4,
@@ -46,16 +27,5 @@ export function energyColor(nameEN: string): string {
 }
 
 export function energyDotStyle(nameEN: string): React.CSSProperties {
-  const color = energyColor(nameEN)
-  const el = Object.keys(typeToFile).find(k => nameEN.startsWith(k))
-  const uri = el ? toDataUri(typeToFile[el]) : ''
-  return uri
-    ? {
-        backgroundColor: color,
-        backgroundImage: `url("${uri}")`,
-        backgroundPosition: 'center',
-        backgroundSize: '150%',
-        backgroundRepeat: 'no-repeat',
-      }
-    : { backgroundColor: color }
+  return { backgroundColor: energyColor(nameEN) }
 }
