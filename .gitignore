@@ -1,17 +1,34 @@
 # Segredos locais (ANTHROPIC_API_KEY...)
 .env
+.env.local
 
 # Binários Go
 *.exe
+*.test
 /bin/
+coverage.out
+*.prof
 
 # Base de cartas local (regenerável via `go run ./cmd/import <setID>`)
 /data/*
 # Banco de efeitos é curado (LLM + revisão humana) — commitado
 !/data/effects.json
 
+# Editores
 .vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
 
 # Frontend (web/dist é commitado para o go:embed funcionar sem Node)
 /web/node_modules/
+/web/.vite/
 .playwright-mcp
+
+# go-task: checksums de build locais (regenerados automaticamente)
+.task/
+
+# impeccable: snapshots de critique e config de live mode (estado local da ferramenta)
+**/.impeccable/
