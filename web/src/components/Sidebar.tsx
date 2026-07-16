@@ -1,4 +1,5 @@
 import type { SideView } from '../api'
+import { TurnTimer, PHASE_LABEL } from './ActionBar'
 
 function PrizeColumn({ side }: { side: SideView }) {
   const n = side.prizes
@@ -15,7 +16,9 @@ function PrizeColumn({ side }: { side: SideView }) {
   )
 }
 
-export function Sidebar({ you, bot, current }: { you: SideView; bot: SideView; current: number }) {
+export function Sidebar({ you, bot, current, turn, phase }: {
+  you: SideView; bot: SideView; current: number; turn: number; phase: string
+}) {
   return (
     <aside id="left">
       <div className={'pp bot' + (current === 1 ? ' turn' : '')}>
@@ -30,6 +33,13 @@ export function Sidebar({ you, bot, current }: { you: SideView; bot: SideView; c
         <div className="sub">Treinador · {you.prizes} prêmios</div>
       </div>
       <PrizeColumn side={you} />
+      <div className={'hud-status ' + (current === 0 ? 'you-turn' : 'bot-turn')}>
+        <span className={'vez ' + (current === 0 ? 'you' : 'bot')}>
+          {current === 0 ? 'SUA VEZ' : 'VEZ DO BOT'}
+        </span>
+        <TurnTimer turn={turn} current={current} />
+        <div className="hud-turnline">Turno {turn} · {PHASE_LABEL[phase] ?? phase}</div>
+      </div>
     </aside>
   )
 }

@@ -6,7 +6,7 @@ import { playEvents } from './effectsfx'
 import { CardPreview, PreviewCtx, type Preview } from './preview'
 import { Sidebar } from './components/Sidebar'
 import { BotMat, YouMat } from './components/Mat'
-import { AttackMenu, ContextBar, PHASE_LABEL, TurnTimer } from './components/ActionBar'
+import { AttackMenu, ContextBar } from './components/ActionBar'
 import { Card } from './components/Card'
 import { Drawer, type Pane } from './components/Drawer'
 
@@ -123,11 +123,6 @@ function HudRail({ s, pane, setPane, endTurn }: {
   )
   return (
     <aside id="right">
-      <div className={'hud-status ' + (myTurn ? 'you-turn' : 'bot-turn')}>
-        <span className={'vez ' + (myTurn ? 'you' : 'bot')}>{myTurn ? 'SUA VEZ' : 'VEZ DO BOT'}</span>
-        <TurnTimer turn={s.turn} current={s.current} />
-        <div className="hud-turnline">Turno {s.turn} · {PHASE_LABEL[s.phase] ?? s.phase}</div>
-      </div>
       <div className="toolstack">
         {tool('cfg', 'Partida')}
         {tool('log', 'Log')}
@@ -565,7 +560,7 @@ export default function App() {
   return (
     <PreviewCtx.Provider value={publishPreview}>
       <div id="app">
-        <Sidebar you={s.you} bot={s.bot} current={s.current} />
+        <Sidebar you={s.you} bot={s.bot} current={s.current} turn={s.turn} phase={s.phase} />
         <div id="center">
           <BotMat side={s.bot} stadium={s.stadium} />
           <YouMat side={s.you} sel={sel} onSelect={select}
